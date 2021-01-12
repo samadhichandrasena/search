@@ -4,8 +4,10 @@
 #include <cstdlib>
 #include <limits>
 #include <vector>
+#include <math.h>
 
-TilesMdist::TilesMdist(FILE *in) : Tiles(in) {
+TilesMdist::TilesMdist(FILE *in, const char *cost) : Tiles(in) {
+	initcosts(cost);
 	initmd();
 	initincr();
 }
@@ -13,14 +15,37 @@ TilesMdist::TilesMdist(FILE *in) : Tiles(in) {
 TilesMdist::State TilesMdist::initialstate() {
 	State s;
 	s.h = 0;
+	s.d = 0;
 	for (unsigned int i = 0; i < Ntiles; i++) {
 		if (init[i] == 0)
 			s.b = i;
-		else
-			s.h += md[init[i]][i];
+		else {
+			s.h += costs[init[i]] * md[init[i]][i];
+			s.d += md[init[i]][i];
+		}
 		s.ts[i] = init[i];
 	}
 	return s;
+}
+
+void TilesMdist::initcosts(const char *cost) {
+  minCost = std::numeric_limits<float>::max();
+  costs[0] = 0;
+  for(unsigned int t = 1; t < Ntiles; t++) {
+	if(strcmp(cost, "heavy") == 0)
+	  costs[t] = t;
+	else if(strcmp(cost, "sqrt") == 0)
+	  costs[t] = sqrt(t);
+	else if(strcmp(cost, "inverse") == 0)
+	  costs[t] = 1.0/t;
+	else if(strcmp(cost, "reverse") == 0)
+	  costs[t] = Ntiles-t;
+	else
+	  costs[t] = 1;
+	if(costs[t] < minCost)
+	  minCost = costs[t];
+  }
+  
 }
 
 void TilesMdist::initmd() {

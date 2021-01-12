@@ -29,8 +29,9 @@ public:
 		return 0;
 	}
 
-	Tiles::Pos unpack_md(const unsigned int md[][Ntiles], Tiles::Tile ts[], Tiles::Cost *h) {
+	Tiles::Pos unpack_md(const unsigned int md[][Ntiles], const Tiles::Cost costs[], Tiles::Tile ts[], Tiles::Cost *h, int *d) {
 		*h = 0;
+		*d = 0;
 		fatal("Tiles::unpack_md is unimplemented");
 		return 0;
 	}
@@ -70,9 +71,10 @@ public:
 		return b;
 	}
 
-	Tiles::Pos unpack_md(const unsigned int md[][Ntiles], Tiles::Tile ts[], Tiles::Cost *hp) {
+	Tiles::Pos unpack_md(const unsigned int md[][Ntiles], const Tiles::Cost costs[], Tiles::Tile ts[], Tiles::Cost *hp, int *dp) {
 		int b = -1;
 		Tiles::Cost h = 0;
+		int d = 0;
 		boost::uint64_t w = word;
 		for (int i = Ntiles - 1; i >= 0; i--) {
 			Tiles::Tile t = w & 0xF;
@@ -80,10 +82,13 @@ public:
 			ts[i] = t;
 			if (t == 0)
 				b = i;
-			else
-				h += md[t][i];
+			else {
+				h += costs[t] * md[t][i];
+				d += md[t][i];
+			}
 		}
 		*hp = h;
+		*dp = d;
 		return b;
 	}
 

@@ -15,7 +15,7 @@ public:
 	typedef unsigned int Tile;
 	typedef unsigned int Pos;
 
-	typedef int Cost;
+	typedef float Cost;
 	typedef int Oper;
 	enum {
 		Nop = -1,

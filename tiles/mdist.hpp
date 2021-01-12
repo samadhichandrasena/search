@@ -25,17 +25,25 @@ public:
 		Tile ts[Ntiles];
 		Pos b;
 		Cost h;
+		int d;
 	};
 
-	TilesMdist(FILE*);
+	TilesMdist(FILE*, const char*);
 
 	State initialstate();
 
 	Cost h(State &s) const { return s.h; }
 
-	Cost d(State &s) const { return s.h; }
+	Cost d(State &s) const { return s.d; }
 
-	bool isgoal(State &s) const { return s.h == 0; }
+	bool isgoal(State &s) const {
+	  for(unsigned int t = 1; t < Ntiles; t++)
+		if(s.ts[t] != t)
+		  return false;
+	  s.h = 0;
+	  s.d = 0;
+	  return true;
+	}
 
 	struct Operators {
 		Operators(TilesMdist& d, State &s) :
@@ -65,17 +73,23 @@ public:
 		State &state;
 
 		Edge(TilesMdist &d, State &s, Oper op) :
-				cost(1), revop(s.b), revcost(1), state(s), oldh(s.h) {
+		  revop(s.b), state(s), oldh(s.h), oldd(s.d) {
 
 			if (op == Ident) {
 				revop = Ident;
+				cost = 0;
+				revcost = 0;
 				return;
 			}
 
 			Tile t = state.ts[op];
+			cost = d.costs[t];
+			revcost = d.costs[t];
 			state.ts[state.b] = t;
-			state.h += d.incr[t][op][state.b];
+			state.h += d.costs[t] * d.incr[t][op][state.b];
+			state.d += d.incr[t][op][state.b];
 			state.b = op;
+			s.ts[s.b] = 0;
 		}
 
 		~Edge() {
@@ -84,11 +98,13 @@ public:
 			state.ts[state.b] = state.ts[revop];
 			state.b = revop;
 			state.h = oldh;
+			state.d = oldd;
 		}
 
 	private:
 		friend class TilesMdist;
 		Cost oldh;
+		int oldd;
 	};
 
 	void pack(PackedState &dst, State &s) const {
@@ -97,7 +113,7 @@ public:
 	}
 
 	State &unpack(State &buf, PackedState &pkd) const {
-		buf.b = pkd.unpack_md(md, buf.ts, &buf.h);
+	  buf.b = pkd.unpack_md(md, costs, buf.ts, &buf.h, &buf.d);
 		return buf;
 	}
 
@@ -111,10 +127,13 @@ public:
 protected:
 
 	unsigned int md[Ntiles][Ntiles];
+	Cost costs[Ntiles];
+	Cost minCost;
 
 private:
 	void initmd();
 	void initincr();
+	void initcosts(const char*);
 
 	int incr[Ntiles][Ntiles][Ntiles];
 };

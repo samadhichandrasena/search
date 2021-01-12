@@ -11,9 +11,12 @@ int main(int argc, const char *argv[]) {
 
 	FILE *lvl = stdin;
 	const char *lvlpath = "";
+	const char *cost = "unit";
 	for (int i = 0; i < argc; i++) {
 		if (i < argc - 1 && strcmp(argv[i], "-lvl") == 0)
 			lvlpath = argv[++i];
+		if(i < argc - 1 && strcmp(argv[i], "-cost") == 0)
+			cost = argv[++i];
 	}
 
 	if (lvlpath[0] != '\0') {
@@ -22,14 +25,16 @@ int main(int argc, const char *argv[]) {
 			fatalx(errno, "Failed to open %s for reading", lvlpath);
 	}
 
-	TilesMdist d(lvl);
+	dfpair(stdout, "cost", "%s", cost);
+	TilesMdist d(lvl, cost);
 
 	if (lvlpath[0] != '\0') {
-		dfpair(stdout, "level", "%s", lvlpath);
-		fclose(lvl);
- 	}
-
+	  dfpair(stdout, "level", "%s", lvlpath);
+	  fclose(lvl);
+	}
+		
 	searchGet<TilesMdist>(get, d, argc, argv);
+	
 	dffooter(stdout);
 	return 0;
 }
