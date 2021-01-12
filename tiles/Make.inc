@@ -38,7 +38,7 @@ tiles/generator: tiles/generator.cc utils/utils.a
 	@$(CXX) $(CXXFLAGS)\
 		tiles/generator.cc\
 		utils/utils.a\
-		$(LDFLAGS) -o $@
+		$(LDFLAGS) -lstdc++ -o $@
 
 CLEAN+=tiles/generator
 

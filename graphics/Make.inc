@@ -5,7 +5,7 @@ GRAPHICSOBJS:=\
 	graphics/scene.o\
 	graphics/ui.o\
 
-GRAPHICSLD:=-lSDL -lSDL_image
+GRAPHICSLD:=-Wl,-Bdynamic -lSDL -lSDL_image
 
 # -framework OpenGL is needed to tell osx to link opengl.
 UNAME_S := $(shell uname -s)

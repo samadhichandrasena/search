@@ -30,7 +30,8 @@ int main(int argc, const char *argv[]) {
 
 	RdbAttrs attrs = attrargs(argc-4, argv+4);
 	printf("attributes:\n");
-	for (auto k = attrs.getkeys().begin(); k != attrs.getkeys().end(); k++)
+	auto ks = attrs.getkeys();
+	for (auto k = ks.begin(); k != attrs.getkeys().end(); k++)
 		printf("\t%s=%s\n", k->c_str(), attrs.lookup(*k).c_str());
 	if (!attrs.mem("alg"))
 		fatal("alg attribute must be specified");
