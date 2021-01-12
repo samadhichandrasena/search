@@ -14,6 +14,7 @@
 #include "dtastar.hpp"
 #include "beam.hpp"
 #include "hhatgreedy.hpp"
+#include "monobeam.hpp"
 
 #include <cstddef>
 #include <cstdio>
@@ -105,6 +106,8 @@ template<class D> SearchAlgorithm<D> *getsearch(int argc, const char *argv[]) {
 		return new BeamSearch<D>(argc, argv);
 	else if (strcmp(argv[1], "hhatgreedy") == 0)
 		return new Hhatgreedy<D>(argc, argv);
+	else if (strcmp(argv[1], "monobeam") == 0)
+		return new MonotonicBeamSearch<D>(argc, argv);
 
 	fatal("Unknown algorithm: %s", argv[1]);
 	return NULL;	// Unreachable
