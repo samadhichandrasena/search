@@ -3,7 +3,7 @@
 #include "../search/search.hpp"                                                 
 #include "../utils/pool.hpp"
                                                                                 
-template <class D> struct BeamSearch : public SearchAlgorithm<D> {
+template <class D> struct BeamSearchMM : public SearchAlgorithm<D> {
 
 	typedef typename D::State State;
 	typedef typename D::PackedState PackedState;                                
@@ -12,6 +12,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 
 	struct Node {
 		int openind;
+		bool selected;
 		Node *parent;
 		PackedState state;
 		Oper op, pop;
@@ -60,7 +61,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
     
 	};
 
-	BeamSearch(int argc, const char *argv[]) :
+	BeamSearchMM(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
 		for (int i = 0; i < argc; i++) {
@@ -76,7 +77,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		nodes = new Pool<Node>();
 	}
 
-	~BeamSearch() {
+	~BeamSearchMM() {
 		delete nodes;
 	}
 
@@ -85,7 +86,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		closed.init(d);
 
 		Node *n0 = init(d, s0);
-		//closed.add(n0);
+		closed.add(n0);
 		open.push(n0);
 
 		int depth = 0;
@@ -97,35 +98,12 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 			depth++;
       
 			Node **beam = new Node*[width];
-			int c = 0;
-			while(c < width && !open.empty()) {
+			int c;
+			for(c = 0; c < width && !open.empty(); c++) {
 				Node *n = open.pop();
 
-				unsigned long hash = n->state.hash(&d);
-				Node *dup = closed.find(n->state, hash);
-				if(!dup) {
-				  closed.add(n, hash);
-				} else {
-				  SearchAlgorithm<D>::res.dups++;
-				  if(!dropdups && n->g < dup->g) {
-					SearchAlgorithm<D>::res.reopnd++;
-					
-					dup->f = dup->f - dup->g + n->g;
-					dup->g = n->g;
-					dup->parent = n->parent;
-					dup->op = n->op;
-					dup->pop = n->pop;
-				  } else {
-					continue;
-				  }
-				}
-
 				beam[c] = n;
-				c++;
-			}
-
-			if(c == 0) {
-			  done = true;
+				n->selected = true;
 			}
 
 			while(!open.empty())
@@ -184,19 +162,51 @@ private:
 		assert (kid);
 		typename D::Edge e(d, state, op);
 		kid->g = parent->g + e.cost;
+		kid->selected = false;
 		d.pack(kid->state, e.state);
 
-		kid->f = kid->g + d.h(e.state);
-		kid->parent = parent;
-		kid->op = op;
-		kid->pop = e.revop;
+		unsigned long hash = kid->state.hash(&d);
+		Node *dup = closed.find(kid->state, hash);
+		if (dup) {
+			this->res.dups++;
+			if (dup->selected && (dropdups || kid->g >= dup->g)) {
+				nodes->destruct(kid);
+				return;
+			}
+			bool isopen = open.mem(dup);
+			if (isopen)
+				open.pre_update(dup);
+			else
+			  if(dup->selected)
+				this->res.reopnd++;
+			if(kid->g < dup->g) {
+			  dup->f = dup->f - dup->g + kid->g;
+			  dup->g = kid->g;
+			  dup->parent = parent;
+			  dup->op = op;
+			  dup->pop = e.revop;
+			  dup->selected = false;
+			}
+			if (isopen) {
+				open.post_update(dup);
+			} else {
+				open.push(dup);
+			}
+			nodes->destruct(kid);
+		} else {
+			kid->f = kid->g + d.h(e.state);
+			kid->parent = parent;
+			kid->op = op;
+			kid->pop = e.revop;
 		
-		State buf, &kstate = d.unpack(buf, kid->state);
-		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
-		  cand = kid;
+			State buf, &kstate = d.unpack(buf, kid->state);
+			if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
+			  cand = kid;
+			}
+		  
+			closed.add(kid, hash);
+			open.push(kid);
 		}
-		
-		open.push(kid);
 	}
 
 	Node *init(D &d, State &s0) {
