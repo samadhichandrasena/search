@@ -129,7 +129,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 			}
 
 			while(!open.empty())
-			  open.pop();
+			  nodes->destruct(open.pop());
 			//open.clear();
       
 			for(int i = 0; i < c && !done && !SearchAlgorithm<D>::limit(); i++) {
