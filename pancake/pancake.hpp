@@ -1,11 +1,13 @@
 // Copyright © 2013 the Search Authors under the MIT license. See AUTHORS for the list of authors.
+#include <climits>
+#include <string.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
 #include <vector>
 
 #if NCAKES >= 128
-#error Too many pancakes for char typed cost.
+#error Too many pancakes for char typed cakes.
 #endif
 
 extern "C" unsigned long hashbytes(unsigned char[], unsigned int);
@@ -18,6 +20,7 @@ public:
 	typedef int Oper;
 	enum { Nop = -1 };
 	typedef int Cost;
+	const char *cost;
 
 	struct State {
 		bool eq(const Pancake*, const State &o) const {
@@ -50,11 +53,12 @@ public:
 
 		Cake cakes[Ncakes];
 		Cost h;
+		Cost d;
 	};
 
 	typedef State PackedState;
 
-	Pancake(FILE*);
+	Pancake(FILE*, const char*);
 
 	State initialstate();
 
@@ -63,7 +67,7 @@ public:
 	}
 
 	Cost d(const State &s) const {
-		return s.h;
+		return s.d;
 	}
 
 	bool isgoal(const State &s) const {
@@ -74,7 +78,7 @@ public:
 		Operators(const Pancake&, const State&) { }
 
 		unsigned int size() const {
-			return Ncakes -1 ;
+			return Ncakes - 1;
 		}
 
 		Oper operator[](unsigned int i) const {
@@ -89,24 +93,55 @@ public:
 		State &state;
 
 		Edge(Pancake &d, State &s, Oper op) :
-				cost(1), revop(op), revcost(1), state(s), oldh(s.h) {
+				revop(op), state(s), oldh(s.h), oldd(s.d) {
+
+			Cost change;
+			
+			if(strcmp(d.cost, "heavy") == 0) {
+				cost = s.cakes[op]+1;
+				revcost = cost;
+				
+				Cost a = s.cakes[op];
+				Cost b = (op!=d.Ncakes-1) ? s.cakes[op+1] : INT_MAX;
+				change = std::min(a, b)+1;
+			}
+			else {
+				cost = 1;
+				revcost = 1;
+				change = 1;
+			}
+			
 			bool wasgap = gap(state.cakes, op);
+
+			if (wasgap) {
+			  state.d--;
+			  state.h -= change;
+			}
+			
 			state.flip(op);
 
 			bool hasgap = gap(state.cakes, op);
-			if (wasgap && !hasgap)
-				state.h--;
-			if (!wasgap && hasgap)
-				state.h++;
+			
+			if (hasgap) {
+			  state.d++;
+			  if(strcmp(d.cost, "heavy") == 0) {
+				Cost a = s.cakes[op];
+				Cost b = (op!=d.Ncakes-1) ? s.cakes[op+1] : INT_MAX;
+				change = std::min(a, b)+1;
+			  }
+			  state.h += change;
+			}
 		}
 
 		~Edge() {
 			state.h = oldh;
+			state.d = oldd;
 			state.flip(revop);
 		}
 
 	private:
 		Cost oldh;
+		Cost oldd;
 	};
 
 	void pack(PackedState &dst, const State &s) const {
@@ -117,7 +152,7 @@ public:
 		return pkd;
 	}
 
-	void dumpstate(FILE *out, State &s) const {
+	void dumpstate(FILE *out, const State &s) const {
 		for (unsigned int i = 0; i < Ncakes; i++) {
 			fprintf(out, "%u", s.cakes[i]);
 			if (i < Ncakes - 1)
@@ -130,12 +165,19 @@ public:
 
 private:
 
-	static Cost ngaps(Cake cakes[]) {
+  static Cost ngaps(Cake cakes[], const char* cost) {
 		Cost gaps = 0;
 
 		for (unsigned int i = 0; i < Ncakes; i++) {
-			if (gap(cakes, i)) 
-				gaps++;
+			if (gap(cakes, i)) {
+				if (strcmp(cost, "heavy") == 0) {
+					Cost a = cakes[i];
+					Cost b = (i!=Ncakes-1) ? cakes[i+1] : INT_MAX;
+					gaps += std::min(a, b)+1;
+				}
+				else
+					gaps++;
+			}
 		}
 
 		return gaps;

@@ -6,7 +6,15 @@
 
 int main(int argc, const char *argv[]) {
 	dfheader(stdout);
-	Pancake d(stdin);
+
+	const char *cost = "unit";
+	for (int i = 0; i < argc; i++) {
+		if(i < argc - 1 && strcmp(argv[i], "-cost") == 0)
+			cost = argv[++i];
+	}
+	dfpair(stdout, "cost", "%s", cost);
+	
+	Pancake d(stdin, cost);
 	search<Pancake>(d, argc, argv);
 	dffooter(stdout);
 	return 0;

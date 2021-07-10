@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cerrno>
 
-Pancake::Pancake(FILE *in) {
+Pancake::Pancake(FILE *in, const char *cost) : cost(cost) {
 	unsigned int ncakes;
 	if (fscanf(in, "%u", &ncakes) != 1)
 		fatalx(errno, "Failed to read the number of pancakes");
@@ -24,7 +24,8 @@ Pancake::State Pancake::initialstate() {
 
 	for (unsigned int i = 0; i < Ncakes; i++)
 		s.cakes[i] = init[i];
-	s.h = ngaps(s.cakes);
+	s.h = ngaps(s.cakes, cost);
+	s.d = ngaps(s.cakes, "unit");
 
 	return s;
 }
