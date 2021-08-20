@@ -53,6 +53,7 @@ include drobot/Make.inc
 include segments/Make.inc
 include vacuum/Make.inc
 include traffic/Make.inc
+include synth_tree/Make.inc
 
 everything: $(EVERYTHING)
 

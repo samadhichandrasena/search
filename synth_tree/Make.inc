@@ -1,20 +1,17 @@
 synth_tree:\
-	synth_tree/synth_tree_solver
+	synth_tree/synth_tree_solver\
 
-CLEAN+=\
-	synth_tree/synth_tree_solver
+SYNTHTREEOBJS=\
+    synth_tree/synth_tree.o
+
+include $(SYNTHTREEOBJS:.o=.d)
+CLEAN+=$(SYNTHTREEOBJS)
 
 EVERYTHING+=synth_tree
 
-SYNTHTREESRC=\
-	synth_tree/synth_tree.cc\
-
-CLEAN+=$(SYNTHTREESRC:.cc=.o)
-
-synth_tree/synth_tree_solver: synth_tree/main.d
 synth_tree/synth_tree_solver:\
-	$(SYNTHTREESRC)\
-	synth_tree/main.cc\
+	$(SYNTHTREEOBJS)\
+	synth_tree/main.o\
 	utils/utils.a\
 	structs/structs.a\
 	search/search.a
@@ -22,3 +19,4 @@ synth_tree/synth_tree_solver:\
 	@$(CXX) $^ $(LDFLAGS) -o $@
 
 include synth_tree/main.d
+CLEAN+=synth_tree/synth_tree_solver synth_tree/main.o
