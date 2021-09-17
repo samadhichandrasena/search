@@ -2,6 +2,8 @@
 #pragma once                                                                    
 #include "../search/search.hpp"                                                 
 #include "../utils/pool.hpp"
+#include <limits.h>
+#include <iostream>
 
 template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 
@@ -86,19 +88,24 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 	  Node *dup = closed.find(n->state, hash);
 	  if(!dup) {
 		closed.add(n, hash);
-	  } else if(n->width_seen < dup->width_seen) {
+	  } else {
 		SearchAlgorithm<D>::res.dups++;
-		SearchAlgorithm<D>::res.reopnd++;
-		dup->width_seen = n->width_seen;
-		if(n->g < dup->g) {
+		if(n->width_seen < dup->width_seen) {
 		  dup->f = dup->f - dup->g + n->g;
 		  dup->g = n->g;
-		  dup->parent = n->parent;
-		  dup->op = n->op;
-		  dup->pop = n->pop;
+		  dup->width_seen = n->width_seen;
+		} else {
+		  if(dropdups || n->g >= dup->g) {
+			nodes->destruct(n);
+			return NULL;
+		  } else {
+			SearchAlgorithm<D>::res.reopnd++;
+			if(n->width_seen == dup->width_seen && n->g < dup->g) {
+			  dup->f = dup->f - dup->g + n->g;
+			  dup->pop = n->pop;
+			} 
+		  }
 		}
-	  } else {
-		return NULL;
 	  }
 
 	  return n;
@@ -117,8 +124,14 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 		beam[0] = open.pop();
 		int used = 1;
 
-		int depth = 0;
+		depth = 0;
+		sol_count = 0;
 		bool done = false;
+		int emptied = 0;
+
+		dfrowhdr(stdout, "incumbent", 6, "num", "nodes expanded",
+			"nodes generated", "solution depth", "solution cost",
+			"wall time");
 
 		/* Beam is established, open is empty at start of each iteration.
 		   Interleave expanding node from beam and selecting from open.
@@ -128,6 +141,10 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 			int c = 0;
 			int i = 0;
 			Node *n;
+			int first_filled = width;
+			double f_sum = 0;
+			int count = 0;
+			
 			while(c < used && i < width
 				  && !done && !SearchAlgorithm<D>::limit()) {
 			  
@@ -143,13 +160,17 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 				n = open.pop();
 				n->width_seen = i;
 			    beam[i] = dedup(d, n);
+				if(beam[i] && i < first_filled) {
+				  first_filled = i;
+				}
+			  }
+			  if(beam[i]) {
+				f_sum += n->f;
+				count++;
 			  }
 			  c++;
 			  i++;
 			}
-
-			if(done)
-			  break;
 
 			while(i < width && !open.empty()) {
 			  n = open.pop();
@@ -157,29 +178,36 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 			  beam[i] = dedup(d, n);
 			  if(beam[i]) {
 				i++;
+				f_sum += n->f;
+				count++;
 			  }
 			}
 
 			used = i;
-			open.clear();
+			while(!open.empty())
+			  nodes->destruct(open.pop());
+			//open.clear();
 
-			bool empty = true;
-
-		    
-			for(int x = 0; x < used; x++) {
-			  if(beam[x])
-				empty = false;
-			}
-
-			if(empty) {
+			if(first_filled == width || used == 0) {
 			  done = true;
+			} else {
+			  //dfpair(stdout, "depth", "%d", depth);
+			  //dfpair(stdout, "avg f value", "%f", f_sum/count);
 			}
 
-			if(cand) {
+			if(cand && cand->width_seen == 0) {
 			  solpath<D, Node>(d, cand, this->res);
 			  done = true;
 			}
+
+			emptied += first_filled;
 		}
+		
+		if(cand) {
+		  solpath<D, Node>(d, cand, this->res);
+		}
+
+		dfpair(stdout, "final depth", "%d", depth);
 
 		delete[] beam;
 		this->finish();
@@ -222,15 +250,25 @@ private:
 		kid->g = parent->g + e.cost;
 		kid->width_seen = parent->width_seen;
 		d.pack(kid->state, e.state);
-		State buf, &kstate = d.unpack(buf, kid->state);
-		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
-		  cand = kid;
-		}
 
 	    kid->f = kid->g + d.h(e.state);
 		kid->parent = parent;
 		kid->op = op;
 		kid->pop = e.revop;
+
+		
+		State buf, &kstate = d.unpack(buf, kid->state);
+		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
+		  cand = kid;
+		  sol_count++;
+		  dfrow(stdout, "incumbent", "uuuugg", sol_count, this->res.expd,
+			this->res.gend, depth, cand->g,
+			walltime() - this->res.wallstart);
+		  return;
+		} else if(cand && cand->g <= kid->f) {
+		  nodes->destruct(kid);
+		  return;
+		}
 		
 		open.push(kid);
 	}
@@ -252,5 +290,7 @@ private:
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
 	Node *cand;
+	int depth;
+	int sol_count;
   
 };

@@ -13,8 +13,12 @@
 #include "dtastar-dump.hpp"
 #include "dtastar.hpp"
 #include "beam.hpp"
+#include "beam-mm.hpp"
+#include "bead.hpp"
 #include "hhatgreedy.hpp"
 #include "monobeam.hpp"
+#include "monobead.hpp"
+#include "monobeam-refill.hpp"
 
 #include <cstddef>
 #include <cstdio>
@@ -104,10 +108,18 @@ template<class D> SearchAlgorithm<D> *getsearch(int argc, const char *argv[]) {
 		return new Dtastar<D>(argc, argv);
 	else if (strcmp(argv[1], "beam") == 0)
 		return new BeamSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "beam-mm") == 0)
+		return new BeamSearchMM<D>(argc, argv);
+	else if (strcmp(argv[1], "bead") == 0)
+		return new BeadSearch<D>(argc, argv);
 	else if (strcmp(argv[1], "hhatgreedy") == 0)
 		return new Hhatgreedy<D>(argc, argv);
 	else if (strcmp(argv[1], "monobeam") == 0)
 		return new MonotonicBeamSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "monobead") == 0)
+		return new MonotonicBeadSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "monobeam-refill") == 0)
+		return new MonotonicBeamSearchRefill<D>(argc, argv);
 
 	fatal("Unknown algorithm: %s", argv[1]);
 	return NULL;	// Unreachable
