@@ -12,7 +12,6 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 
 	struct Node {
 		int openind;
-		bool selected;
 		Node *parent;
 		PackedState state;
 		Oper op, pop;
@@ -86,41 +85,66 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		closed.init(d);
 
 		Node *n0 = init(d, s0);
-		closed.add(n0);
+		//closed.add(n0);
 		open.push(n0);
 
 		int depth = 0;
 
 
-		bool solved = false;
+		bool done = false;
     
-		while (!open.empty() && !solved && !SearchAlgorithm<D>::limit()) {
+		while (!open.empty() && !done && !SearchAlgorithm<D>::limit()) {
 			depth++;
       
 			Node **beam = new Node*[width];
-			int c;
-			for(c = 0; c < width && !open.empty(); c++) {
+			int c = 0;
+			double f_sum = 0;
+			while(c < width && !open.empty()) {
 				Node *n = open.pop();
 
+				unsigned long hash = n->state.hash(&d);
+				Node *dup = closed.find(n->state, hash);
+				if(!dup) {
+				  closed.add(n, hash);
+				} else {
+				  SearchAlgorithm<D>::res.dups++;
+				  if(!dropdups && n->g < dup->g) {
+					SearchAlgorithm<D>::res.reopnd++;
+					
+					dup->f = dup->f - dup->g + n->g;
+					dup->g = n->g;
+					dup->parent = n->parent;
+					dup->op = n->op;
+					dup->pop = n->pop;
+				  } else {
+					continue;
+				  }
+				}
+
+				f_sum += n->f;
 				beam[c] = n;
-				n->selected = true;
+				c++;
 			}
 
+			if(c == 0) {
+			  done = true;
+			}
+			  
+
 			while(!open.empty())
-			  open.pop();
+			  nodes->destruct(open.pop());
 			//open.clear();
       
-			for(int i = 0; i < c && !solved && !SearchAlgorithm<D>::limit(); i++) {
+			for(int i = 0; i < c && !done && !SearchAlgorithm<D>::limit(); i++) {
 				Node *n = beam[i];
 				State buf, &state = d.unpack(buf, n->state);
 
-				if (d.isgoal(state)) {
-					solpath<D, Node>(d, n, this->res);
-					solved = true;
-					break;
-				}
-
 				expand(d, n, state);
+			}
+
+			if(cand) {
+			  solpath<D, Node>(d, cand, this->res);
+			  done = true;
 			}
 
 			delete[] beam;
@@ -163,42 +187,19 @@ private:
 		assert (kid);
 		typename D::Edge e(d, state, op);
 		kid->g = parent->g + e.cost;
-		kid->selected = false;
 		d.pack(kid->state, e.state);
 
-		unsigned long hash = kid->state.hash(&d);
-		Node *dup = closed.find(kid->state, hash);
-		if (dup) {
-			this->res.dups++;
-			if (dup->selected && (dropdups || kid->g >= dup->g)) {
-				nodes->destruct(kid);
-				return;
-			}
-			bool isopen = open.mem(dup);
-			if (isopen)
-				open.pre_update(dup);
-			dup->f = dup->f - dup->g + kid->g;
-			dup->g = kid->g;
-			dup->parent = parent;
-			dup->op = op;
-			dup->pop = e.revop;
-			dup->selected = false;
-			if (isopen) {
-				open.post_update(dup);
-			} else {
-				if(dup->selected)
-				  this->res.reopnd++;
-				open.push(dup);
-			}
-			nodes->destruct(kid);
-		} else {
-			kid->f = kid->g + d.h(e.state);
-			kid->parent = parent;
-			kid->op = op;
-			kid->pop = e.revop;
-			closed.add(kid, hash);
-			open.push(kid);
+		kid->f = kid->g + d.h(e.state);
+		kid->parent = parent;
+		kid->op = op;
+		kid->pop = e.revop;
+		
+		State buf, &kstate = d.unpack(buf, kid->state);
+		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
+		  cand = kid;
 		}
+		
+		open.push(kid);
 	}
 
 	Node *init(D &d, State &s0) {
@@ -208,6 +209,7 @@ private:
 		n0->f = d.h(s0);
 		n0->pop = n0->op = D::Nop;
 		n0->parent = NULL;
+		cand = NULL;
 		return n0;
 	}
 
@@ -216,5 +218,6 @@ private:
 	OpenList<Node, Node, Cost> open;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
+	Node *cand;
   
 };
