@@ -63,11 +63,14 @@ template <class D> struct ParallelHillClimbingD : public SearchAlgorithm<D> {
 	ParallelHillClimbingD(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
+		dump = false;
 		for (int i = 0; i < argc; i++) {
 			if (i < argc - 1 && strcmp(argv[i], "-width") == 0)
 				width = atoi(argv[++i]);
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
+			if (strcmp(argv[i], "-dump") == 0)
+				dump = true;
 		}
 
 		if (width < 1)
@@ -78,6 +81,45 @@ template <class D> struct ParallelHillClimbingD : public SearchAlgorithm<D> {
 
 	~ParallelHillClimbingD() {
 		delete nodes;
+	}
+  
+    void dump_and_clear(D &d, Node **beam, int c, int depth) {
+	    if(dump) { 
+		  Node *tmp;
+		  fprintf(stderr, "depth: %d\n", depth);
+		  fprintf(stderr, "used states:\n");
+		  for(int i = 0; i < c; i++) {
+			tmp = beam[i];
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			fprintf(stderr, "\n");
+			double node_g = tmp->g;
+			fprintf(stderr, "g: %f\n", node_g);
+			fprintf(stderr, "\n");
+			double node_h = d.h(state);
+			fprintf(stderr, "h: %f\n", node_h);
+			fprintf(stderr, "\n");
+			double node_d = d.d(state);
+			fprintf(stderr, "d: %f\n", node_d);
+			fprintf(stderr, "\n");
+		  }
+		  
+		  fprintf(stderr, "unused states:\n");
+		  
+		  while(!open.empty()) {
+			tmp = open.pop();
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			fprintf(stderr, "\n");
+			
+			nodes->destruct(tmp);
+		  }
+		} else {
+		  while(!open.empty()) {
+			nodes->destruct(open.pop());
+		  }
+		  //open.clear();
+		}
 	}
 
 	void search(D &d, typename D::State &s0) {
@@ -135,10 +177,8 @@ template <class D> struct ParallelHillClimbingD : public SearchAlgorithm<D> {
 			  beam[i] = open.pop();
 			  closed.add(beam[i]);
 			}
-			  
-			while(!open.empty())
-			  nodes->destruct(open.pop());
-			//open.clear();
+
+			dump_and_clear(d, beam, c, depth);
 
 			if(cand) {
 			  solpath<D, Node>(d, cand, this->res);
@@ -231,6 +271,7 @@ private:
 
     int width;
     bool dropdups;
+    bool dump;
 	OpenList<Node, Node, Cost> open;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;

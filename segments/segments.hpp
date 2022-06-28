@@ -238,6 +238,10 @@ public:
 		~Edge() { }
 	};
 
+	void dumpstate(FILE *out, State &s) const {
+	    fatal("dumpstate not implemented for segments.");
+	}
+
 	State initialstate() const;
 
 	State goalstate() const;

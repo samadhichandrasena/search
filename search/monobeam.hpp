@@ -66,11 +66,14 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 	MonotonicBeamSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
+		dump = false;
 		for (int i = 0; i < argc; i++) {
 			if (i < argc - 1 && strcmp(argv[i], "-width") == 0)
 				width = atoi(argv[++i]);
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
+			if (strcmp(argv[i], "-dump") == 0)
+				dump = true;
 		}
 
 		if (width < 1)
@@ -82,6 +85,45 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 	~MonotonicBeamSearch() {
 		delete nodes;
 	}
+  
+    void dump_and_clear(D &d, Node **beam, int c, int depth) {
+	    if(dump) { 
+		  Node *tmp;
+		  fprintf(stderr, "depth: %d\n", depth);
+		  fprintf(stderr, "used states:\n");
+		  for(int i = 0; i < c; i++) {
+			tmp = beam[i];
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			fprintf(stderr, "\n");
+			double node_g = tmp->g;
+			fprintf(stderr, "g: %f\n", node_g);
+			fprintf(stderr, "\n");
+			double node_h = d.h(state);
+			fprintf(stderr, "h: %f\n", node_h);
+			fprintf(stderr, "\n");
+			double node_d = d.d(state);
+			fprintf(stderr, "d: %f\n", node_d);
+			fprintf(stderr, "\n");
+		  }
+		  
+		  fprintf(stderr, "unused states:\n");
+		  
+		  while(!open.empty()) {
+			tmp = open.pop();
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			fprintf(stderr, "\n");
+			
+			nodes->destruct(tmp);
+		  }
+		} else {
+		  while(!open.empty()) {
+			nodes->destruct(open.pop());
+		  }
+		  //open.clear();
+		}
+	}
 
 	Node *dedup(D &d, Node *n) {
 	  unsigned long hash = n->state.hash(&d);
@@ -91,9 +133,8 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 	  } else {
 		SearchAlgorithm<D>::res.dups++;
 		if(n->width_seen < dup->width_seen) {
-		  dup->f = dup->f - dup->g + n->g;
-		  dup->g = n->g;
-		  dup->width_seen = n->width_seen;
+		  closed.remove(dup->state, hash);
+		  closed.add(n, hash);
 		} else {
 		  if(dropdups || n->g >= dup->g) {
 			nodes->destruct(n);
@@ -101,8 +142,8 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 		  } else {
 			SearchAlgorithm<D>::res.reopnd++;
 			if(n->width_seen == dup->width_seen && n->g < dup->g) {
-			  dup->f = dup->f - dup->g + n->g;
-			  dup->pop = n->pop;
+			  closed.remove(dup->state, hash);
+			  closed.add(n, hash);
 			} 
 		  }
 		}
@@ -129,8 +170,8 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 		bool done = false;
 		int emptied = 0;
 
-		dfrowhdr(stdout, "incumbent", 6, "num", "nodes expanded",
-			"nodes generated", "solution depth", "solution cost",
+		dfrowhdr(stdout, "incumbent", 7, "num", "nodes expanded",
+			"nodes generated", "solution depth", "solution cost", "width seen",
 			"wall time");
 
 		/* Beam is established, open is empty at start of each iteration.
@@ -184,9 +225,7 @@ template <class D> struct MonotonicBeamSearch : public SearchAlgorithm<D> {
 			}
 
 			used = i;
-			while(!open.empty())
-			  nodes->destruct(open.pop());
-			//open.clear();
+			dump_and_clear(d, beam, c, depth);
 
 			if(first_filled == width || used == 0) {
 			  done = true;
@@ -261,8 +300,8 @@ private:
 		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
 		  cand = kid;
 		  sol_count++;
-		  dfrow(stdout, "incumbent", "uuuugg", sol_count, this->res.expd,
-			this->res.gend, depth, cand->g,
+		  dfrow(stdout, "incumbent", "uuuugug", sol_count, this->res.expd,
+			this->res.gend, depth, cand->g, cand->width_seen,
 			walltime() - this->res.wallstart);
 		  return;
 		} else if(cand && cand->g <= kid->f) {
@@ -286,6 +325,7 @@ private:
 
     int width;
     bool dropdups;
+    bool dump;
 	OpenList<Node, Node, Cost> open;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;

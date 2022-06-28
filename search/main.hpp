@@ -18,7 +18,6 @@
 #include "hhatgreedy.hpp"
 #include "monobeam.hpp"
 #include "monobead.hpp"
-#include "monobeam-refill.hpp"
 #include "phc.hpp"
 #include "phcd.hpp"
 
@@ -120,8 +119,6 @@ template<class D> SearchAlgorithm<D> *getsearch(int argc, const char *argv[]) {
 		return new MonotonicBeamSearch<D>(argc, argv);
 	else if (strcmp(argv[1], "monobead") == 0)
 		return new MonotonicBeadSearch<D>(argc, argv);
-	else if (strcmp(argv[1], "monobeam-refill") == 0)
-		return new MonotonicBeamSearchRefill<D>(argc, argv);
 	else if (strcmp(argv[1], "phc") == 0)
 		return new ParallelHillClimbing<D>(argc, argv);
 	else if (strcmp(argv[1], "phcd") == 0)

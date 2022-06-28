@@ -40,9 +40,16 @@ template <class D> struct BeadSearch : public SearchAlgorithm<D> {
 
 		/* Indicates whether Node a has better value than Node b. */
 		static bool pred(Node *a, Node *b) {
-			if (a->fd == b->fd)
-				return a->f < b->f;
-			return a->fd < b->fd;
+		    if (a->fd == b->fd) {
+			    if(a->f == b->f) {
+				    return a->g > b->g;
+				} else {
+				    return a->f < b->f;
+				}
+			}
+			else {
+			    return a->fd < b->fd;
+			}
 		}
 
 		/* Priority of node. */
@@ -63,11 +70,14 @@ template <class D> struct BeadSearch : public SearchAlgorithm<D> {
 	BeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
+		dump = false;
 		for (int i = 0; i < argc; i++) {
 			if (i < argc - 1 && strcmp(argv[i], "-width") == 0)
 				width = atoi(argv[++i]);
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
+			if (strcmp(argv[i], "-dump") == 0)
+				dump = true;
 		}
 
 		if (width < 1)
@@ -78,6 +88,48 @@ template <class D> struct BeadSearch : public SearchAlgorithm<D> {
 
 	~BeadSearch() {
 		delete nodes;
+	}
+
+    void dump_and_clear(D &d, Node **beam, int c, int depth) {
+	    if(dump) { 
+		  Node *tmp;
+		  fprintf(stderr, "depth: %d\n", depth);
+		  fprintf(stderr, "used states:\n");
+		  for(int i = 0; i < c; i++) {
+			tmp = beam[i];
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			double node_g = tmp->g;
+			fprintf(stderr, "g: %f\n", node_g);
+			double node_h = d.h(state);
+			fprintf(stderr, "h: %f\n", node_h);
+			double node_d = d.d(state);
+			fprintf(stderr, "d: %f\n", node_d);
+			fprintf(stderr, "\n");
+		  }
+		  
+		  fprintf(stderr, "unused states:\n");
+		  
+		  while(!open.empty()) {
+			tmp = open.pop();
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			double node_g = tmp->g;
+			fprintf(stderr, "g: %f\n", node_g);
+			double node_h = d.h(state);
+			fprintf(stderr, "h: %f\n", node_h);
+			double node_d = d.d(state);
+			fprintf(stderr, "d: %f\n", node_d);
+			fprintf(stderr, "\n");
+			
+			nodes->destruct(tmp);
+		  }
+		} else {
+		  while(!open.empty()) {
+			nodes->destruct(open.pop());
+		  }
+		  //open.clear();
+		}
 	}
 
 	void search(D &d, typename D::State &s0) {
@@ -108,15 +160,8 @@ template <class D> struct BeadSearch : public SearchAlgorithm<D> {
 				} else {
 				  SearchAlgorithm<D>::res.dups++;
 				  if(!dropdups && n->g < dup->g) {
-					SearchAlgorithm<D>::res.reopnd++;
-					
-					dup->f = dup->f - dup->g + n->g;
-					dup->fd = dup->fd - dup->gd + n->gd;
-					dup->g = n->g;
-					dup->gd = n->gd;
-					dup->parent = n->parent;
-					dup->op = n->op;
-					dup->pop = n->pop;
+					closed.remove(dup->state, hash);
+					closed.add(n, hash);
 				  } else {
 					continue;
 				  }
@@ -129,11 +174,8 @@ template <class D> struct BeadSearch : public SearchAlgorithm<D> {
 			if(c == 0) {
 			  done = true;
 			}
-			  
-
-			while(!open.empty())
-			  nodes->destruct(open.pop());
-			//open.clear();
+			 
+			dump_and_clear(d, beam, c, depth);
       
 			for(int i = 0; i < c && !done && !SearchAlgorithm<D>::limit(); i++) {
 				Node *n = beam[i];
@@ -219,6 +261,7 @@ private:
 
     int width;
     bool dropdups;
+    bool dump;
 	OpenList<Node, Node, Cost> open;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;

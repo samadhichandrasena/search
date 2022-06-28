@@ -43,9 +43,16 @@ template <class D> struct MonotonicBeadSearch : public SearchAlgorithm<D> {
 
 		/* Indicates whether Node a has better value than Node b. */
 		static bool pred(Node *a, Node *b) {
-			if (a->fd == b->fd)
-				return a->f < b->f;
-			return a->fd < b->fd;
+		    if (a->fd == b->fd) {
+			    if(a->f == b->f) {
+				    return a->g > b->g;
+				} else {
+				    return a->f < b->f;
+				}
+			}
+			else {
+			    return a->fd < b->fd;
+			}
 		}
 
 		/* Priority of node. */
@@ -66,11 +73,14 @@ template <class D> struct MonotonicBeadSearch : public SearchAlgorithm<D> {
 	MonotonicBeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
+		dump = false;
 		for (int i = 0; i < argc; i++) {
 			if (i < argc - 1 && strcmp(argv[i], "-width") == 0)
 				width = atoi(argv[++i]);
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
+			if (strcmp(argv[i], "-dump") == 0)
+				dump = true;
 		}
 
 		if (width < 1)
@@ -82,6 +92,46 @@ template <class D> struct MonotonicBeadSearch : public SearchAlgorithm<D> {
 	~MonotonicBeadSearch() {
 		delete nodes;
 	}
+  
+    void dump_and_clear(D &d, Node **beam, int c, int depth) {
+	    if(dump) { 
+		  Node *tmp;
+		  fprintf(stderr, "depth: %d\n", depth);
+		  fprintf(stderr, "used states:\n");
+		  for(int i = 0; i < c; i++) {
+			tmp = beam[i];
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			fprintf(stderr, "\n");
+			double node_g = tmp->g;
+			fprintf(stderr, "g: %f\n", node_g);
+			fprintf(stderr, "\n");
+			double node_h = d.h(state);
+			fprintf(stderr, "h: %f\n", node_h);
+			fprintf(stderr, "\n");
+			double node_d = d.d(state);
+			fprintf(stderr, "d: %f\n", node_d);
+			fprintf(stderr, "\n");
+		  }
+		  
+		  fprintf(stderr, "unused states:\n");
+		  
+		  while(!open.empty()) {
+			tmp = open.pop();
+			State buf, &state = d.unpack(buf, tmp->state);
+			d.dumpstate(stderr, state);
+			fprintf(stderr, "\n");
+			
+			nodes->destruct(tmp);
+		  }
+		} else {
+		  while(!open.empty()) {
+			nodes->destruct(open.pop());
+		  }
+		  //open.clear();
+		}
+	}
+
 
 	Node *dedup(D &d, Node *n) {
 	  unsigned long hash = n->state.hash(&d);
@@ -128,8 +178,8 @@ template <class D> struct MonotonicBeadSearch : public SearchAlgorithm<D> {
 		bool done = false;
 		int emptied = 0;
 
-		dfrowhdr(stdout, "incumbent", 6, "num", "nodes expanded",
-			"nodes generated", "solution depth", "solution cost",
+		dfrowhdr(stdout, "incumbent", 7, "num", "nodes expanded",
+			"nodes generated", "solution depth", "solution cost", "width seen",
 			"wall time");
 
 		/* Beam is established, open is empty at start of each iteration.
@@ -141,6 +191,7 @@ template <class D> struct MonotonicBeadSearch : public SearchAlgorithm<D> {
 			int i = 0;
 			Node *n;
 			int first_filled = width;
+			Cost f_min = Cost(-1);
 			
 			while(c < used && i < width
 				  && !done && !SearchAlgorithm<D>::limit()) {
@@ -160,6 +211,11 @@ template <class D> struct MonotonicBeadSearch : public SearchAlgorithm<D> {
 				if(beam[i] && i < first_filled) {
 				  first_filled = i;
 				}
+				if(beam[i]) {
+				  if(f_min == -1 || beam[i]->f <= f_min) {
+					f_min = beam[i]->f;
+				  }
+				}
 			  }
 			  c++;
 			  i++;
@@ -170,20 +226,21 @@ template <class D> struct MonotonicBeadSearch : public SearchAlgorithm<D> {
 			  n->width_seen = i;
 			  beam[i] = dedup(d, n);
 			  if(beam[i]) {
+				if(f_min == -1 || beam[i]->f <= f_min) {
+				  f_min = beam[i]->f;
+				}
 				i++;
 			  }
 			}
 
 			used = i;
-			while(!open.empty())
-			  nodes->destruct(open.pop());
-			//open.clear();
+		    dump_and_clear(d, beam, c, depth);
 
 			if(first_filled == width || used == 0) {
 			  done = true;
 			}
 
-			if(cand && cand->width_seen == 0) {
+			if(cand && f_min >= cand->g) {
 			  solpath<D, Node>(d, cand, this->res);
 			  done = true;
 			}
@@ -251,14 +308,14 @@ private:
 		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
 		  cand = kid;
 		  sol_count++;
-		  dfrow(stdout, "incumbent", "uuuugg", sol_count, this->res.expd,
-			this->res.gend, depth, cand->g,
+		  dfrow(stdout, "incumbent", "uuuugug", sol_count, this->res.expd,
+			this->res.gend, depth, cand->g, cand->width_seen,
 			walltime() - this->res.wallstart);
 		  return;
-		} else if(cand && cand->g <= kid->f) {
+		} /*else if(cand && cand->g <= kid->f) {
 		  nodes->destruct(kid);
 		  return;
-		}
+		  }*/
 		
 		open.push(kid);
 	}
@@ -278,6 +335,7 @@ private:
 
     int width;
     bool dropdups;
+    bool dump;
 	OpenList<Node, Node, Cost> open;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
