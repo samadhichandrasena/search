@@ -18,6 +18,10 @@
 #include "hhatgreedy.hpp"
 #include "monobeam.hpp"
 #include "monobead.hpp"
+#include "monofloor.hpp"
+#include "monofloor-d.hpp"
+#include "monoonward.hpp"
+#include "monoonward-d.hpp"
 #include "phc.hpp"
 #include "phcd.hpp"
 
@@ -123,6 +127,14 @@ template<class D> SearchAlgorithm<D> *getsearch(int argc, const char *argv[]) {
 		return new ParallelHillClimbing<D>(argc, argv);
 	else if (strcmp(argv[1], "phcd") == 0)
 		return new ParallelHillClimbingD<D>(argc, argv);
+	else if (strcmp(argv[1], "monoonward") == 0)
+		return new MonoOnwardSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "monoonward-d") == 0)
+		return new MonoOnwardDSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "monofloor") == 0)
+		return new MonoFloorSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "monofloor-d") == 0)
+		return new MonoFloorDSearch<D>(argc, argv);
 
 	fatal("Unknown algorithm: %s", argv[1]);
 	return NULL;	// Unreachable
