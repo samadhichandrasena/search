@@ -1,13 +1,15 @@
-#CXX:=g++
-#CC:=gcc
+# Comment these out to use clang
+CXX:=g++
+CC:=gcc
 
 #
 # clang 3.0 should work.
 # clang 2.9 is known to be broken, as it can't seem to
 #	compile the GNU header files…
 #
-CXX:=clang++
-CC:=clang
+# Uncomment these to use clang
+#CXX:=clang++
+#CC:=clang
 
 AR:=ar
 
