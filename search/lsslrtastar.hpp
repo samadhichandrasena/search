@@ -8,6 +8,7 @@
 #include <ctime>
 #include <cerrno>
 #include <vector>
+#include <algorithm>
 
 class LookaheadLimit {
 public:
