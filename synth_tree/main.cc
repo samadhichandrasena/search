@@ -7,7 +7,7 @@
 int main(int argc, const char *argv[]) {
 	dfheader(stdout);
 
-	float h_err;
+	float h_err = 0;
 	for (int i = 0; i < argc; i++) {
 		if(i < argc - 1 && strcmp(argv[i], "-err") == 0)
 			h_err = strtod(argv[++i], NULL);

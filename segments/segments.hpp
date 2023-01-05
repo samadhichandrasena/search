@@ -259,6 +259,10 @@ public:
 		return buf;
 	}
 
+	void dumpstate(FILE *out, State &s) const {
+		fatal("NOT IMPLEMENTED: dumpstate\n");
+	}
+
 	Cost pathcost(const std::vector<State>&, const std::vector<Oper>&);
 
 	// prinitial prints the initial state to the given
