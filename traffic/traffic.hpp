@@ -125,7 +125,7 @@ struct Traffic {
  			return *this;
 		}
 
-		State() : d(-1) { }
+		State() : h(-1), d(-1) { }
 
 		State (const State &o) : loc(o.loc), t(o.t), h(o.h), d(o.d) { }
 

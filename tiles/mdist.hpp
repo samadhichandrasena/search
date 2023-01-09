@@ -22,7 +22,7 @@ public:
 		}
 	private:
 		friend class TilesMdist;
-		Tile ts[Ntiles];
+		Tile ts[Ntiles] = {};
 		Pos b;
 		Cost h;
 		int d;
