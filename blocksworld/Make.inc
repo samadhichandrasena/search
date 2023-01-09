@@ -1,23 +1,15 @@
 blocksworld:\
-    blocksworld/10bw_solver\
     blocksworld/20bw_solver\
     blocksworld/50bw_solver\
-    blocksworld/100bw_solver\
-    blocksworld/10bwdp_solver\
     blocksworld/20bwdp_solver\
-    blocksworld/50bwdp_solver\
-    blocksworld/100bwdp_solver\
+    blocksworld/50bwdp_solver
 
 
 CLEAN+=\
-    blocksworld/10bw_solver\
     blocksworld/20bw_solver\
     blocksworld/50bw_solver\
-    blocksworld/100bw_solver\
-    blocksworld/10bwdp_solver\
     blocksworld/20bwdp_solver\
-    blocksworld/50bwdp_solver\
-    blocksworld/100bwdp_solver\
+    blocksworld/50bwdp_solver
 
 EVERYTHING+=blocksworld
 
