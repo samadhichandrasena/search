@@ -23,6 +23,8 @@ search/search.a: $(SEARCHOBJS)
 
 CLEAN+=$(SEARCHOBJS) search/search.a
 
+LEARNLD:=-Wl,-Bdynamic -llapack
+
 search/anyprof/mkprof:\
 	search/anyprof/mkprof.cc\
 	$(SEARCHOBJS)\
@@ -66,7 +68,7 @@ search/learnh/hlms:\
 	rdb/rdb.a\
 	utils/utils.a
 	@echo $@
-	@$(CXX) $(CXXFLAGS) $^ -llapack $(LDFLAGS) -o $@
+	@$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LEARNLD) -o $@
 CLEAN+=search/learnh/hlms
 
 search/learnh/learnsig:\
@@ -76,7 +78,7 @@ search/learnh/learnsig:\
 	rdb/rdb.a\
 	utils/utils.a
 	@echo $@
-	@$(CXX) $(CXXFLAGS) $^ -llapack $(LDFLAGS) -o $@
+	@$(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LEARNLD) -o $@
 CLEAN+=search/learnh/learnsig
 
 TESTS+=.search_test
