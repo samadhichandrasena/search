@@ -40,6 +40,8 @@ void TilesMdist::initcosts(const char *cost) {
 	  costs[t] = 1.0/t;
 	else if(strcmp(cost, "reverse") == 0)
 	  costs[t] = Ntiles-t;
+	else if(strcmp(cost, "revinv") == 0)
+	  costs[t] = 1.0/(Ntiles-t);
 	else
 	  costs[t] = 1;
 	if(costs[t] < minCost)
