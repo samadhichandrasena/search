@@ -4,6 +4,7 @@
 #include "../utils/utils.hpp"
 #include "../gridnav/gridmap.hpp"
 #include <memory>
+#include <cstring>
 #include <cstdio>
 
 class Vacuum {
@@ -15,7 +16,7 @@ public:
 	static const Oper Charge = 5;
 	static const Oper Nop = -1;
 
-	Vacuum(FILE*);
+	Vacuum(FILE*, const char *);
 
 	class State {
 	public:
@@ -38,7 +39,7 @@ public:
 			return loc*dirt->size() + ndirt;
 		}
 
-		int loc, energy, ndirt;
+		int loc, energy, ndirt, weight;
 		std::shared_ptr<std::vector<bool> > dirt;
 	};
 
@@ -70,11 +71,35 @@ public:
 				maxy = y;
 		}
 
-		return s.ndirt + (maxx-minx) + (maxy-miny);
+		assert(s.weight > 0);
+		return s.ndirt + ((maxx-minx) + (maxy-miny)) * s.weight;
 	}
 
 	Cost d(const State &s) const {
-		return h(s);
+		unsigned int i;
+		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
+			;
+
+		int minx = dirtLocs[i].first;
+		int maxx = minx;
+		int miny = dirtLocs[i].second;
+		int maxy = miny;
+
+		for (i++; i < s.dirt->size(); i++) {
+			if (!s.dirt->at(i))
+				continue;
+			int x = dirtLocs[i].first, y = dirtLocs[i].second;
+			if (x < minx)
+				minx = x;
+			if (x > maxx)
+				maxx = x;
+			if (y < miny)
+				miny = y;
+			if (y > maxy)
+				maxy = y;
+		}
+
+		return s.ndirt + (maxx-minx) + (maxy-miny);
 	}
 
 	bool isgoal(const State &s) const {
@@ -118,7 +143,7 @@ public:
 		Oper revop;
 		Cost revcost;
 
-		Edge(const Vacuum &d, const State &s, Oper op) : state(s), cost(1), revcost(1) {
+		Edge(const Vacuum &d, const State &s, Oper op) : state(s), cost(s.weight), revcost(1) {
 			if (op == Suck) {
 				int dirt = d.dirt[s.loc];
 
@@ -129,6 +154,8 @@ public:
 				state.dirt = std::make_shared<std::vector<bool>>(s.dirt->begin(), s.dirt->end());
 				state.dirt->at(dirt) = false;
 				state.ndirt--;
+			    state.weight += d.cost_mod;
+				cost = 1;
 
 				revop = Nop;
 				revcost = Cost(-1);
@@ -165,6 +192,10 @@ public:
 	Cost pathcost(const std::vector<State>&, const std::vector<Oper>&);
 
 	void printpath(FILE*, const std::vector<Oper>&) const;
+
+protected:
+	int orig_dirt;
+	Cost cost_mod;
 
 private:
 

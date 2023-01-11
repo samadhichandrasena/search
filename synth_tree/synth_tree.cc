@@ -6,9 +6,9 @@
 #include <cerrno>
 
 SynthTree::SynthTree(FILE *in, float max_err) : max_err(max_err) {
-    if (!fscanf(in, "%ld", &seed)) {
+	if (!fscanf(in, "%ld", &seed)) {
 	    fatal("Failed to read seed.\n");
-    }
+	}
     dfpair(stdout, "random seed", "%ld", this->seed);
     dfpair(stdout, "starting AGD", "%d", AGD);
 }

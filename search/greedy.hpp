@@ -148,7 +148,7 @@ private:
 			}
 			nodes->destruct(kid);
 		} else {
-			kid->h = d.h(e.state);
+			kid->h = speedy ? d.d(e.state) : d.h(e.state);
 			kid->parent = parent;
 			kid->op = op;
 			kid->pop = e.revop;
