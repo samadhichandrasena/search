@@ -104,6 +104,9 @@ public:
 template<> class PackedTiles<16> : public PackedTiles64<16> {
 };
 
+template<> class PackedTiles<12> : public PackedTiles64<12> {
+};
+
 template<> class PackedTiles<9> : public PackedTiles64<9> {
 };
 
