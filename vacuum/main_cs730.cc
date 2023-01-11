@@ -12,7 +12,7 @@ int main(int argc, const char *argv[]) {
 	if (!srch)
 		fatal("Must specify a search algorithm");
 
-	Vacuum d(stdin);
+	Vacuum d(stdin, "unit");
 
 	auto s0 = d.initialstate();
 	try {

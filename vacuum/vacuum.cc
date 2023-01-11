@@ -3,7 +3,7 @@
 #include "vacuum.hpp"
 #include <utility>
 
-Vacuum::Vacuum(FILE *in) : x0(-1), y0(-1) {
+Vacuum::Vacuum(FILE *in, const char *cost) : x0(-1), y0(-1) {
 	int w, h;
 	if (fscanf(in, "%d\n%d\n", &w, &h) != 2)
 		fatal("Failed to read the width and height");
@@ -48,6 +48,11 @@ Vacuum::Vacuum(FILE *in) : x0(-1), y0(-1) {
 		fatal("No start location");
 
 	reverseops();
+	orig_dirt = ndirt();
+	if(strcmp(cost, "heavy") == 0)
+	  cost_mod = 1;
+	else
+	  cost_mod = 0;
 }
 
 void Vacuum::reverseops() {
@@ -69,6 +74,7 @@ Vacuum::State Vacuum::initialstate() const {
 	s.loc = map->index(x0, y0);
 	s.ndirt = ndirt();
 	s.dirt = std::make_shared<std::vector<bool> >(ndirt(), true);
+	s.weight = 1;
 	return s;
 }
 
