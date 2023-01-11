@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Output the WIDTH and HEIGHT -D arguments
 # given a tiles board size 8, 15, 24, etc.
