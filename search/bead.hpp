@@ -137,7 +137,6 @@ template <class D> struct BeadSearch : public SearchAlgorithm<D> {
 		closed.init(d);
 
 		Node *n0 = init(d, s0);
-		//closed.add(n0);
 		open.push(n0);
 
 		int depth = 0;
