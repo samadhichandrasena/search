@@ -3,7 +3,7 @@
 #include "../search/search.hpp"                                                 
 #include "../utils/pool.hpp"
                                                                                 
-template <class D> struct BeamSearch : public SearchAlgorithm<D> {
+template <class D> struct BeamSearchH : public SearchAlgorithm<D> {
 
 	typedef typename D::State State;
 	typedef typename D::PackedState PackedState;                                
@@ -15,7 +15,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		Node *parent;
 		PackedState state;
 		Oper op, pop;
-		Cost f, g;
+		Cost h, g;
 
 		Node() : openind(-1) {
 		}
@@ -40,14 +40,14 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 
 		/* Indicates whether Node a has better value than Node b. */
 		static bool pred(Node *a, Node *b) {
-			if (a->f == b->f)
+			if (a->h == b->h)
 				return a->g > b->g;
-			return a->f < b->f;
+			return a->h < b->h;
 		}
 
 		/* Priority of node. */
 		static Cost prio(Node *n) {
-			return n->f;
+			return n->h;
 		}
 
 		/* Priority for tie breaking. */
@@ -60,7 +60,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
     
 	};
 
-	BeamSearch(int argc, const char *argv[]) :
+	BeamSearchH(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
 		dump = false;
@@ -79,7 +79,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		nodes = new Pool<Node>();
 	}
 
-	~BeamSearch() {
+	~BeamSearchH() {
 		delete nodes;
 	}
 
@@ -131,6 +131,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		closed.init(d);
 
 		Node *n0 = init(d, s0);
+		//closed.add(n0);
 		open.push(n0);
 
 		depth = 0;
@@ -235,7 +236,7 @@ private:
 		kid->g = parent->g + e.cost;
 		d.pack(kid->state, e.state);
 
-		kid->f = kid->g + d.h(e.state);
+		kid->h = d.h(e.state);
 		kid->parent = parent;
 		kid->op = op;
 		kid->pop = e.revop;
@@ -252,7 +253,7 @@ private:
 		Node *n0 = nodes->construct();
 		d.pack(n0->state, s0);
 		n0->g = Cost(0);
-		n0->f = d.h(s0);
+		n0->h = d.h(s0);
 		n0->pop = n0->op = D::Nop;
 		n0->parent = NULL;
 		cand = NULL;

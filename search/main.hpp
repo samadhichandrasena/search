@@ -13,7 +13,9 @@
 #include "dtastar-dump.hpp"
 #include "dtastar.hpp"
 #include "beam.hpp"
+#include "bead.hpp"
 #include "beam-mm.hpp"
+#include "beam-h.hpp"
 #include "hhatgreedy.hpp"
 #include "mintest.hpp"
 
@@ -105,8 +107,12 @@ template<class D> SearchAlgorithm<D> *getsearch(int argc, const char *argv[]) {
 		return new Dtastar<D>(argc, argv);
 	else if (strcmp(argv[1], "beam") == 0)
 		return new BeamSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "bead") == 0)
+		return new BeadSearch<D>(argc, argv);
 	else if (strcmp(argv[1], "beam-mm") == 0)
 		return new BeamSearchMM<D>(argc, argv);
+	else if (strcmp(argv[1], "beam-h") == 0)
+		return new BeamSearchH<D>(argc, argv);
 	else if (strcmp(argv[1], "hhatgreedy") == 0)
 		return new Hhatgreedy<D>(argc, argv);
 	else if (strcmp(argv[1], "mintest") == 0)

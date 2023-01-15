@@ -3,7 +3,7 @@
 #include "../search/search.hpp"                                                 
 #include "../utils/pool.hpp"
                                                                                 
-template <class D> struct BeamSearch : public SearchAlgorithm<D> {
+template <class D> struct BeadSearch : public SearchAlgorithm<D> {
 
 	typedef typename D::State State;
 	typedef typename D::PackedState PackedState;                                
@@ -15,7 +15,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		Node *parent;
 		PackedState state;
 		Oper op, pop;
-		Cost f, g;
+		Cost f, g, fd, gd;
 
 		Node() : openind(-1) {
 		}
@@ -40,14 +40,21 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 
 		/* Indicates whether Node a has better value than Node b. */
 		static bool pred(Node *a, Node *b) {
-			if (a->f == b->f)
-				return a->g > b->g;
-			return a->f < b->f;
+		    if (a->fd == b->fd) {
+			    if(a->f == b->f) {
+				    return a->g > b->g;
+				} else {
+				    return a->f < b->f;
+				}
+			}
+			else {
+			    return a->fd < b->fd;
+			}
 		}
 
 		/* Priority of node. */
 		static Cost prio(Node *n) {
-			return n->f;
+			return n->fd;
 		}
 
 		/* Priority for tie breaking. */
@@ -60,7 +67,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
     
 	};
 
-	BeamSearch(int argc, const char *argv[]) :
+	BeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
 		dump = false;
@@ -79,11 +86,10 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		nodes = new Pool<Node>();
 	}
 
-	~BeamSearch() {
+	~BeadSearch() {
 		delete nodes;
 	}
 
-  
     void dump_and_clear(D &d, Node **beam, int c, int depth) {
 	    if(dump) { 
 		  Node *tmp;
@@ -92,7 +98,6 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		  for(int i = 0; i < c; i++) {
 			tmp = beam[i];
 			State buf, &state = d.unpack(buf, tmp->state);
-			fprintf(stderr, "expanded state:\n");
 			d.dumpstate(stderr, state);
 			double node_g = tmp->g;
 			fprintf(stderr, "g: %f\n", node_g);
@@ -116,6 +121,7 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 			double node_d = d.d(state);
 			fprintf(stderr, "d: %f\n", node_d);
 			fprintf(stderr, "\n");
+			
 			nodes->destruct(tmp);
 		  }
 		} else {
@@ -131,9 +137,10 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 		closed.init(d);
 
 		Node *n0 = init(d, s0);
+		//closed.add(n0);
 		open.push(n0);
 
-		depth = 0;
+		int depth = 0;
 
 
 		bool done = false;
@@ -167,9 +174,8 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 			if(c == 0) {
 			  done = true;
 			}
-			  
-
-		    dump_and_clear(d, beam, c, depth);
+			 
+			dump_and_clear(d, beam, c, depth);
       
 			for(int i = 0; i < c && !done && !SearchAlgorithm<D>::limit(); i++) {
 				Node *n = beam[i];
@@ -181,16 +187,6 @@ template <class D> struct BeamSearch : public SearchAlgorithm<D> {
 			if(cand) {
 			  solpath<D, Node>(d, cand, this->res);
 			  done = true;
-			  
-			  // print solution path if dumping
-			  if(dump)
-				fprintf(stderr, "\nSolution path:\n");
-			  Node *n = cand;
-			  while(dump && n) {
-				State buf, &state = d.unpack(buf, n->state);
-				d.dumpstate(stderr, state);
-				n = n->parent;
-			  }
 			}
 
 			delete[] beam;
@@ -233,9 +229,11 @@ private:
 		assert (kid);
 		typename D::Edge e(d, state, op);
 		kid->g = parent->g + e.cost;
+		kid->gd = parent->gd + Cost(1);
 		d.pack(kid->state, e.state);
 
 		kid->f = kid->g + d.h(e.state);
+		kid->fd = kid->gd + d.d(e.state);
 		kid->parent = parent;
 		kid->op = op;
 		kid->pop = e.revop;
@@ -252,7 +250,9 @@ private:
 		Node *n0 = nodes->construct();
 		d.pack(n0->state, s0);
 		n0->g = Cost(0);
+		n0->gd = Cost(0);
 		n0->f = d.h(s0);
+		n0->fd = d.d(s0);
 		n0->pop = n0->op = D::Nop;
 		n0->parent = NULL;
 		cand = NULL;
@@ -260,7 +260,6 @@ private:
 	}
 
     int width;
-    int depth;
     bool dropdups;
     bool dump;
 	OpenList<Node, Node, Cost> open;
