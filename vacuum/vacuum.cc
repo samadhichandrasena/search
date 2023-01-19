@@ -49,10 +49,23 @@ Vacuum::Vacuum(FILE *in, const char *cost) : x0(-1), y0(-1) {
 
 	reverseops();
 	orig_dirt = ndirt();
-	if(strcmp(cost, "heavy") == 0)
+	if(strcmp(cost, "heavy") == 0) {
 	  cost_mod = 1;
-	else
+	  orig_cost = 1;
+	  back = false;
+	} else if(strcmp(cost, "back") == 0) {
 	  cost_mod = 0;
+	  orig_cost = 1;
+	  back = true;
+	} else if(strcmp(cost, "backheavy") == 0) {
+	  cost_mod = -1;
+	  orig_cost = orig_dirt+1;
+	  back = true;
+	} else {
+	  cost_mod = 0;
+	  orig_cost = 1;
+	  back = false;
+	}
 }
 
 void Vacuum::reverseops() {
@@ -71,10 +84,14 @@ void Vacuum::reverseops() {
 
 Vacuum::State Vacuum::initialstate() const {
 	State s;
-	s.loc = map->index(x0, y0);
+    s.loc = map->index(x0, y0);
 	s.ndirt = ndirt();
 	s.dirt = std::make_shared<std::vector<bool> >(ndirt(), true);
-	s.weight = 1;
+	s.weight = orig_cost;
+	s.start_dirt = (-1)*(!back);
+	fprintf(stdout, "Start dirt: %d\n", s.start_dirt);
+	fprintf(stdout, "Orig dirt: %d\n", orig_dirt);
+	s.back = back;
 	return s;
 }
 

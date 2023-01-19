@@ -9,22 +9,24 @@
 
 class Vacuum {
 public:
-	typedef int Cost;
+	typedef float Cost;
 
 	typedef int Oper;	// directions 0, 1, 2, 3
 	static const Oper Suck = 4;
 	static const Oper Charge = 5;
 	static const Oper Nop = -1;
+	static const Oper Magic = -2;
+	static const Oper MakeGoal = -3;
 
 	Vacuum(FILE*, const char *);
 
 	class State {
 	public:
-		State() : loc(-1), energy(-1), ndirt(-1) {
+		State() : loc(-1), energy(-1), ndirt(-1), start_dirt(-1), back(false) {
 		}
 
 		bool eq(const Vacuum*, const State &o) const {
-			if (loc != o.loc || ndirt != o.ndirt)
+			if (loc != o.loc || ndirt != o.ndirt || start_dirt != o.start_dirt)
 				return false;
 
 			for (unsigned int i = 0; i < dirt->size(); i++) {
@@ -39,7 +41,8 @@ public:
 			return loc*dirt->size() + ndirt;
 		}
 
-		int loc, energy, ndirt, weight;
+		int loc, energy, ndirt, weight, start_dirt;
+		bool back;
 		std::shared_ptr<std::vector<bool> > dirt;
 	};
 
@@ -48,18 +51,26 @@ public:
 	State initialstate(void) const;
 
 	Cost h(const State &s) const {
+		if (s.start_dirt != -1)
+		  return 0;
+
+		auto pt = map->coord(s.loc);
+
+		int minx = pt.first;
+		int maxx = minx;
+		int miny = pt.second;
+		int maxy = miny;
+		
 		unsigned int i;
-		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
+		for (i = 0; i < s.dirt->size() && (s.dirt->at(i) + back) != 1; i++)
 			;
 
-		int minx = dirtLocs[i].first;
-		int maxx = minx;
-		int miny = dirtLocs[i].second;
-		int maxy = miny;
+		int ndirt = 1;
 
-		for (i++; i < s.dirt->size(); i++) {
-			if (!s.dirt->at(i))
+		for (; i < s.dirt->size(); i++) {
+			if ((s.dirt->at(i) + back) != 1)
 				continue;
+			ndirt++;
 			int x = dirtLocs[i].first, y = dirtLocs[i].second;
 			if (x < minx)
 				minx = x;
@@ -72,22 +83,30 @@ public:
 		}
 
 		assert(s.weight > 0);
-		return s.ndirt + ((maxx-minx) + (maxy-miny)) * s.weight;
+		return ndirt + ((maxx-minx) + (maxy-miny)) * s.weight;
 	}
 
 	Cost d(const State &s) const {
+		if (s.start_dirt != -1)
+		  return 0;
+
+		auto pt = map->coord(s.loc);
+
+		int minx = pt.first;
+		int maxx = minx;
+		int miny = pt.second;
+		int maxy = miny;
+		
 		unsigned int i;
-		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
+		for (i = 0; i < s.dirt->size() && (s.dirt->at(i) + back) != 1; i++)
 			;
 
-		int minx = dirtLocs[i].first;
-		int maxx = minx;
-		int miny = dirtLocs[i].second;
-		int maxy = miny;
+		int ndirt = 1;
 
 		for (i++; i < s.dirt->size(); i++) {
-			if (!s.dirt->at(i))
+			if ((s.dirt->at(i) + back) != 1)
 				continue;
+			ndirt++;
 			int x = dirtLocs[i].first, y = dirtLocs[i].second;
 			if (x < minx)
 				minx = x;
@@ -99,7 +118,7 @@ public:
 				maxy = y;
 		}
 
-		return s.ndirt + (maxx-minx) + (maxy-miny);
+		return ndirt + (maxx-minx) + (maxy-miny);
 	}
 
 	bool isgoal(const State &s) const {
@@ -108,6 +127,15 @@ public:
 
 	struct Operators {
 		Operators(const Vacuum &d, const State &s) : n(0) {
+			if (s.start_dirt == d.orig_dirt)
+				return;
+			
+			if (s.start_dirt != -1) {
+				ops[n++] = MakeGoal;
+				ops[n++] = Magic;
+				return;
+			}
+			
 			if (s.energy == 0)
 				return;
 
@@ -144,7 +172,26 @@ public:
 		Cost revcost;
 
 		Edge(const Vacuum &d, const State &s, Oper op) : state(s), cost(s.weight), revcost(1) {
-			if (op == Suck) {
+			if (op == MakeGoal) {
+				std::pair<int, int> startLoc = d.dirtLocs[s.start_dirt];
+				state.loc = d.map->index(startLoc.first, startLoc.second);
+				
+				int dirt = s.start_dirt;
+				state.start_dirt = -1;
+
+				state.dirt = std::make_shared<std::vector<bool>>(s.dirt->begin(), s.dirt->end());
+				state.dirt->at(dirt) = false;
+				state.ndirt--;
+			    state.weight += d.cost_mod;
+				cost = 1;
+				
+				revop = Nop;
+				revcost = Cost(-1);
+			} else if (op == Magic) {
+				state.start_dirt++;
+				revop = Nop;
+				revcost = Cost(-1);
+			} else if (op == Suck) {
 				int dirt = d.dirt[s.loc];
 
 				assert (dirt >= 0);
@@ -187,6 +234,7 @@ public:
 		fprintf(out, "(%d, %d), energy=%d, ndirt=%d", pt.first, pt.second, s.energy, s.ndirt);
 		for (unsigned int i = 0; i < s.dirt->size(); i++)
 			fprintf(out, " %d", (int) s.dirt->at(i));
+		fprintf(out, "\n");
 	}
 
 	Cost pathcost(const std::vector<State>&, const std::vector<Oper>&);
@@ -196,6 +244,9 @@ public:
 protected:
 	int orig_dirt;
 	Cost cost_mod;
+	int orig_cost;
+	int start_dirt;
+	bool back;
 
 private:
 
