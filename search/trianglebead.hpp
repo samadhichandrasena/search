@@ -213,18 +213,17 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 
 		expand(d, n0, s0);
 
-		depth = 1;
 		sol_count = 0;
+		depth = 1;
 
-		dfrowhdr(stdout, "incumbent", 7, "num", "nodes expanded",
-			"nodes generated", "solution depth", "solution cost", "width seen",
-			"wall time");
+		dfrowhdr(stdout, "incumbent", 5, "num", "nodes expanded",
+			"nodes generated", "solution cost", "wall time");
 
 		bool done = false;
     
 		while (!done && !SearchAlgorithm<D>::limit()) {
-		  depth++;
 		  done = true;
+		  depth++;
 
 		  open_it = openlists.end->prev;
 		  open = open_it->list;
@@ -326,9 +325,9 @@ private:
 		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
 		  cand = kid;
 		  sol_count++;
-		  dfrow(stdout, "incumbent", "uuuugug", sol_count, this->res.expd,
-			this->res.gend, 0, cand->g, 0,
-			walltime() - this->res.wallstart);
+		  dfrow(stdout, "incumbent", "uuugg", sol_count, this->res.expd,
+				this->res.gend, cand->g,
+				walltime() - this->res.wallstart);
 		  return;
 		} else if(cand && cand->g <= kid->f) {
 		  nodes->destruct(kid);
