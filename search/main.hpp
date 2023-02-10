@@ -14,6 +14,7 @@
 #include "dtastar.hpp"
 #include "beam.hpp"
 #include "bead.hpp"
+#include "trianglebead.hpp"
 #include "beam-mm.hpp"
 #include "hhatgreedy.hpp"
 #include "ees.hpp"
@@ -108,6 +109,8 @@ template<class D> SearchAlgorithm<D> *getsearch(int argc, const char *argv[]) {
 		return new BeamSearch<D>(argc, argv);
 	else if (strcmp(argv[1], "bead") == 0)
 		return new BeadSearch<D>(argc, argv);
+	else if (strcmp(argv[1], "triangle") == 0)
+		return new TriangleBeadSearch<D>(argc, argv);
 	else if (strcmp(argv[1], "beam-mm") == 0)
 		return new BeamSearchMM<D>(argc, argv);
 	else if (strcmp(argv[1], "hhatgreedy") == 0)
