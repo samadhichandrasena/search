@@ -10,6 +10,7 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 	typedef typename D::PackedState PackedState;                                
 	typedef typename D::Cost Cost;                                              
 	typedef typename D::Oper Oper;
+  
 
 	struct Node {
 		int openind;
@@ -18,7 +19,7 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		Oper op, pop;
 		int d;
 		Cost f, g;
-
+  
 		Node() : openind(-1) {
 		}
 
@@ -61,6 +62,96 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		ClosedEntry<Node, D> closedent;
     
 	};
+
+	struct RingNode {
+	  RingNode *next;
+	  RingNode *prev;
+	  OpenList<Node, Node, Cost> *list;
+	  RingNode(OpenList<Node, Node, Cost> *l) {
+		next = NULL;
+		prev = NULL;
+		list = l;
+	  }
+	  ~RingNode() {
+		delete list;
+	  }
+	};
+  
+	struct Ring {
+	  RingNode *begin;
+	  RingNode *end;
+	  int maxsize;
+	  int size;
+	  int removed;
+	  int reused;
+
+	  Ring() {
+		begin = new RingNode(NULL);
+		end = new RingNode(NULL);
+		begin->next = end;
+		begin->prev = end;
+		end->next = begin;
+		end->prev = begin;
+		maxsize = 0;
+		size = 0;
+		removed = 0;
+		reused = 0;
+	  }
+
+	  ~Ring() {
+		while(begin->next != end) {
+		  RingNode *temp = begin;
+		  begin = begin->next;
+		  delete temp;
+		}
+		delete begin;
+		delete end;
+	  }
+
+	  void move_after(RingNode *n, RingNode *b) {
+		n->prev->next = n->next;
+		n->next->prev = n->prev;
+		b->next->prev = n;
+		n->next = b->next;
+		n->prev = b;
+		b->next = n;
+	  }
+
+	  void add() {
+		if(begin->prev == end) {
+		  RingNode *n = new RingNode(new OpenList<Node, Node, Cost>());
+		  n->next = begin->next;
+		  n->prev = begin;
+		  begin->next->prev = n;
+		  begin->next = n;
+		  maxsize++;
+		  size++;
+		} else {
+		  move_after(begin->prev, begin);
+		  size++;
+		  reused++;
+		}
+	  }
+
+	  void remove_rest(RingNode *from) {
+		RingNode *a = from->prev;
+		RingNode *b = begin->next;
+
+		begin->next = from;
+		from->prev = begin;
+		a->next = begin;
+		b->prev = begin->prev;
+		begin->prev->next = b;
+		begin->prev = a;
+	  }
+
+	  void remove() {
+	    move_after(end->prev, end);
+		size--;
+		removed++;
+	  }
+	};
+  
 
 	TriangleBeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
@@ -113,13 +204,16 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		Node *n0 = init(d, s0);
 		closed.add(n0);
 
-		open = new OpenList<Node, Node, Cost>();
+		openlists.add();
+		auto open_it = openlists.end->prev;
+		open = open_it->list;
+		auto last_filled = open_it;
 
-		openlists.push_front(open);
+		open_count = 0;
 
 		expand(d, n0, s0);
 
-		depth = 0;
+		depth = 1;
 		sol_count = 0;
 
 		dfrowhdr(stdout, "incumbent", 7, "num", "nodes expanded",
@@ -127,16 +221,13 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 			"wall time");
 
 		bool done = false;
-		int n_open = 0;
     
 		while (!done && !SearchAlgorithm<D>::limit()) {
 		  depth++;
 		  done = true;
-		  n_open = 0;
 
-		  auto open_it = openlists.end();
-		  open_it--;
-		  open = *open_it;
+		  open_it = openlists.end->prev;
+		  open = open_it->list;
 			
 		  bool looped = false;
 			
@@ -145,37 +236,39 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 				  
 			while(!n && !open->empty()) {
 			  n = dedup(d, open->pop());
+			  open_count--;
 			}
 
-			n_open += !open->empty();
-
-			if(open_it != openlists.begin()) {
-			  open = *(--open_it);
+			if(open_it->prev != openlists.begin) {
+			  open_it = open_it->prev;
+			  open = open_it->list;
 			} else {
-			  open = new OpenList<Node, Node, Cost>();
-			  openlists.push_front(open);
+			  openlists.add();
+			  open_it = openlists.begin->next;
+			  open = open_it->list;
 			  looped = true;
 			}
 
+			if(n)
+			  last_filled = open_it;
+
 			if(!n) {
 			  if(done) {
-				//fprintf(stdout, "pruning an open list.\n");
-				openlists.pop_back();
+				openlists.remove();
 			  }
 			  continue;
 			}
-			/*if(cand)
-			  fprintf(stdout, "current candidate has f = %f\n", cand->f);
-			fprintf(stdout, "expanding node with f = %f\n", n->f);
-			fprintf(stdout, "%lu nodes have been expanded\n", SearchAlgorithm<D>::res.expd);*/
 				  
 			State buf, &state = d.unpack(buf, n->state);
 			expand(d, n, state);
+		    
 			
 			done = false;
 		  }
-		  //fprintf(stdout, "%d non-empty open lists\n", n_open);
-		  //fprintf(stdout, "%lu total open lists\n", openlists.size());
+
+		  if(last_filled != openlists.begin->next) {
+			openlists.remove_rest(last_filled);
+		  }
 		}
 
 		if(cand) {
@@ -196,6 +289,7 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 	virtual void output(FILE *out) {
 		SearchAlgorithm<D>::output(out);
 		closed.prstats(stdout, "closed ");
+		dfpair(stdout, "open lists created", "%d", openlists.maxsize);
 		dfpair(stdout, "open list type", "%s", open->kind());
 		dfpair(stdout, "node size", "%u", sizeof(Node));
 	}
@@ -240,7 +334,8 @@ private:
 		  nodes->destruct(kid);
 		  return;
 		}
-		
+
+		open_count++;
 		open->push(kid);
 	}
 
@@ -257,13 +352,14 @@ private:
 	}
 
     bool dropdups;
- 	std::list<OpenList<Node, Node, Cost> *> openlists;
+    Ring openlists;
  	OpenList<Node, Node, Cost> *open;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
 	Node *cand;
 	int width;
 	int depth;
+	int open_count;
 	int sol_count;
   
 };
