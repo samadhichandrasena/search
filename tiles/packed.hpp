@@ -2,6 +2,7 @@
 #include <cassert>
 #include <boost/cstdint.hpp>
 #include <boost/integer/static_log2.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
 
 void fatal(const char*, ...);
 extern "C" unsigned long hashbytes(unsigned char[], unsigned int);
@@ -110,3 +111,62 @@ template<> class PackedTiles<12> : public PackedTiles64<12> {
 template<> class PackedTiles<9> : public PackedTiles64<9> {
 };
 
+template<int Ntiles> class PackedTiles128 {
+	friend class Tiles;
+
+	boost::multiprecision::uint128_t word;
+
+public:
+
+	void pack(Tiles::Tile ts[]) {
+		word = 0;
+		for (int i = 0; i < Ntiles; i++)
+			word = (word << 5) | ts[i];
+	}
+
+	Tiles::Pos unpack(Tiles::Tile ts[]) {
+		int b;
+		boost::multiprecision::uint128_t w = word;
+		for (int i = Ntiles - 1; i >= 0; i--) {
+			Tiles::Tile t = (Tiles::Tile)(w & 0x1F);
+			w >>= 5;
+			ts[i] = t;
+			if (t == 0)
+				b = i;
+		}
+		return b;
+	}
+
+	Tiles::Pos unpack_md(const unsigned int md[][Ntiles], const Tiles::Cost costs[], Tiles::Tile ts[], Tiles::Cost *hp, int *dp) {
+		int b = -1;
+		Tiles::Cost h = 0;
+		int d = 0;
+		boost::multiprecision::uint128_t w = word;
+		for (int i = Ntiles - 1; i >= 0; i--) {
+			Tiles::Tile t = (Tiles::Tile)(w & 0x1F);
+			w >>= 5;
+			ts[i] = t;
+			if (t == 0)
+				b = i;
+			else {
+				h += costs[t] * md[t][i];
+				d += md[t][i];
+			}
+		}
+		*hp = h;
+		*dp = d;
+		return b;
+	}
+
+	unsigned long hash(const void*) {
+		boost::hash<boost::multiprecision::uint128_t> hasher;
+		return hasher(word);
+	}
+
+	bool eq(const void*, const PackedTiles128 &o) const {
+		return word == o.word;
+	}
+};
+
+template<> class PackedTiles<25> : public PackedTiles128<25> {
+};
