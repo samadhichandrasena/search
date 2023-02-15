@@ -214,15 +214,16 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		expand(d, n0, s0);
 
 		sol_count = 0;
+		depth = 1;
 
-		dfrowhdr(stdout, "incumbent", 7, "num", "nodes expanded",
+		dfrowhdr(stdout, "incumbent", 5, "num", "nodes expanded",
 			"nodes generated", "solution cost", "wall time");
 
 		bool done = false;
     
 		while (!done && !SearchAlgorithm<D>::limit()) {
 		  done = true;
-		  depth = 1;
+		  depth++;
 
 		  open_it = openlists.end->prev;
 		  open = open_it->list;
@@ -230,7 +231,6 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  bool looped = false;
 			
 		  while(!looped) {
-			depth++;
 			Node *n = NULL;
 				  
 			while(!n && !open->empty()) {
