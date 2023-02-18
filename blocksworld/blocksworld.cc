@@ -11,7 +11,7 @@ Blocksworld::Blocksworld(FILE *in) {
 	if (fscanf(in, "%u\n", &Nblocks) != 1)
 		fatalx(errno, "Failed to read the number of blocks");
 
-    if (!fscanf(in, "What each block is on:\n")) {
+    if (fscanf(in, "What each block is on:\n") != 0) {
 	  fatal("Missing block header line in input file.\n");
 	}
     for (unsigned int i = 0; i < Nblocks; i++) {
@@ -19,7 +19,7 @@ Blocksworld::Blocksworld(FILE *in) {
             fatalx(errno, "Failed to read basic block number %d", i);
     }
 
-    if (!fscanf(in, "Goal:\n")) {
+    if (fscanf(in, "Goal:\n") != 0) {
 	  fatal("Missing goal header line in input file.\n");
 	}
 	for (unsigned int i = 0; i < Nblocks; i++) {
