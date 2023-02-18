@@ -23,6 +23,7 @@ template <class D> struct Arastar : public SearchAlgorithm<D> {
 
 	struct Node {
 		ClosedEntry<Node, D> closedent;
+		ClosedEntry<Node, D> inconsent;
 		int openind;
 		Node *parent;
 		PackedState state;
