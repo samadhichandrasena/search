@@ -74,14 +74,22 @@ template <class D> struct Arastar : public SearchAlgorithm<D> {
 		std::vector<Node*> &nodes() {
 			return incons;
 		}
+
+		static PackedState &key(Node *n) {
+			return n->state;
+		}
 	
 		void clear() {
 			mem.clear();
 			incons.clear();
 		}
+
+		static ClosedEntry<Node, D> &closedentry(Node *n) {
+			return n->inconsent;
+		}
 	
 	private:
-	 	ClosedList<Node, Node, D> mem;
+	 	ClosedList<Incons, Node, D> mem;
 		std::vector<Node*> incons;
 	};
 
