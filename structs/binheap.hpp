@@ -56,6 +56,28 @@ public:
 		pushdown(i);
 	}
 
+	// remove removes the element at the given index and repairs the
+	// heap.  Note that the index value must be tracked properly,
+	// i.e., i < 0 means that the element is not in the priority queue
+	// and i >= 0 means that the element is at the given index. O(lg
+	// n) time.
+	void remove(long i) {
+		if (i  < 0)
+			fatal("Removing an invalid heap index: %ld, size=%lu\n", i, heap.size());
+		else {
+			Elm res = heap[i];
+			if (heap.size() > 1) {
+				heap[i] = heap.back();
+				heap.pop_back();
+				Ops::setind(heap[i], i);
+			    update(i);
+			} else {
+				heap.pop_back();
+			}
+			Ops::setind(res, -1);
+		}
+	}
+
 	// pushupdate either pushes the element or updates it's
 	// position in the queue, given the element and i, it's
 	// index value.  Note that the index value must be tracked
