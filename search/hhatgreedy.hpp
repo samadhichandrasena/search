@@ -141,7 +141,7 @@ private:
               this->res.dups++;
               if (dropdups || kid->g >= dup->g) {
                 nodes->destruct(kid);
-                return;
+                continue;
               }
               bool isopen = open.mem(dup);
               if (isopen)
