@@ -7,6 +7,7 @@
 
 #include "../structs/intpq.hpp"
 #include "../structs/binheap.hpp"
+#include "../structs/minmaxheap.hpp"
 
 #include "closedlist.hpp"
 
@@ -258,6 +259,71 @@ public:
         fill = 0;
 	}
 };
+
+// A MinMaxOpenList holds nodes and returns the min or max ordered
+// by some priority.  The Ops class has a pred method which accepts
+// two Nodes and returns true if the 1st node is a predecessor
+// of the second.
+template <class Ops, class Node, class Cost>
+class MinMaxOpenList {
+public:
+	const char *kind() {
+		return "min-max heap";
+	}
+
+	void push(Node *n) {
+		heap.push(n);
+	}
+
+	Node *pop_max() {
+		boost::optional<Node*> p = heap.pop_max();
+		if (!p)
+			return NULL;
+		return *p;
+	}
+
+	Node *pop_min() {
+		boost::optional<Node*> p = heap.pop_min();
+		if (!p)
+			return NULL;
+		return *p;
+	}
+
+	void pre_update(Node *n) {
+	}
+
+	void post_update(Node *n) {
+		if (Ops::getind(n) < 0)
+			heap.push(n);
+		else
+			heap.update(Ops::getind(n));
+	}
+
+	bool empty() {
+		return heap.empty();
+	}
+
+	bool mem(Node *n) {
+		return Ops::getind(n) != -1;
+	}
+
+	void clear() {
+		heap.clear();
+	}
+
+	int size() {
+		return heap.size();
+	}
+
+private:
+	struct Heapops {
+ 		static bool pred(Node *a, Node *b) { return Ops::pred(a, b); }
+
+		static void setind(Node *n, int i) { Ops::setind(n, i); }
+	};
+	MinMaxHeap<Heapops, Node*> heap;
+};
+
 
 // A Result is returned from a completed search.  It contains
 // statistical information about the search along with the

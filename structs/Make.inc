@@ -20,6 +20,7 @@ STRUCTSTESTOBJS=\
 	structs/test_htable.o\
 	structs/test_intpq.o\
 	structs/test_binheap.o\
+	structs/test_minmaxheap.o\
 	structs/test_stn.o\
 	structs/test_kdtree.o\
 
