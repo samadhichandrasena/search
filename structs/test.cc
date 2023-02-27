@@ -12,6 +12,8 @@ bool intpq_push_test();
 bool intpq_pop_test();
 bool binheap_push_test();
 bool binheap_pop_test();
+bool minmaxheap_push_test();
+bool minmaxheap_pop_test();
 bool stn_copy_eq_test();
 bool stn_add_one_ok_test();
 bool stn_add_one_incons_test();
@@ -29,6 +31,8 @@ static const Test tests[] = {
 	Test("intpq pop test", intpq_pop_test),
 	Test("binheap push test", binheap_push_test),
 	Test("binheap pop test", binheap_pop_test),
+	Test("minmaxheap push test", minmaxheap_push_test),
+	Test("minmaxheap pop test", minmaxheap_pop_test),
 	Test("stn copy/eq test", stn_copy_eq_test),
 	Test("stn add one ok test", stn_add_one_ok_test),
 	Test("stn add one incons test", stn_add_one_incons_test),
@@ -46,6 +50,8 @@ void intpq_push_bench(unsigned long, double *, double *);
 void intpq_pop_bench(unsigned long, double *, double *);
 void binheap_push_bench(unsigned long, double*, double*);
 void binheap_pop_bench(unsigned long, double*, double*);
+void minmaxheap_push_bench(unsigned long, double*, double*);
+void minmaxheap_pop_bench(unsigned long, double*, double*);
 void stn_add_bench(unsigned long, double*, double*);
 void stn_undo_bench(unsigned long, double*, double*);
 
@@ -56,6 +62,8 @@ static const Benchmark benches[] = {
 	Benchmark("intpq pop benchmark", intpq_pop_bench),
 	Benchmark("binheap push benchmark", binheap_push_bench),
 	Benchmark("binheap pop benchmark", binheap_pop_bench),
+	Benchmark("minmaxheap push benchmark", minmaxheap_push_bench),
+	Benchmark("minmaxheap pop benchmark", minmaxheap_pop_bench),
 	Benchmark("stn add benchmark", stn_add_bench),
 	Benchmark("stn undo benchmark", stn_undo_bench),
 };
