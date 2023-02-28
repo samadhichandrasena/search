@@ -66,14 +66,16 @@ public:
 			fatal("Removing an invalid heap index: %ld, size=%lu\n", i, heap.size());
 		else {
 			Elm res = heap[i];
-			if (heap.size() > 1) {
+			if(size() == 1 || i == size()-1) {
+				heap.pop_back();
+			} else if(i == 0) {
+			  pop();
+			} else {
 				heap[i] = heap.back();
 				heap.pop_back();
 				Ops::setind(heap[i], i);
 			    update(i);
-			} else {
-				heap.pop_back();
-			}
+			} 
 			Ops::setind(res, -1);
 		}
 	}
