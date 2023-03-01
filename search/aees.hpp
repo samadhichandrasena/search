@@ -175,7 +175,7 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 		fopen.push(n0);
 
 		sol_count = 0;
-		dfrowhdr(stdout, "incumbent", 5, "num", "nodes expanded",
+		dfrowhdr(stdout, "incumbent", 6, "num", "nodes expanded",
 				 "nodes generated", "solution bound", "solution cost",
 				 "wall time");
 
