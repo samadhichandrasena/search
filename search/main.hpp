@@ -16,6 +16,7 @@
 #include "bead.hpp"
 #include "beam-mm.hpp"
 #include "hhatgreedy.hpp"
+#include "ees.hpp"
 
 #include <cstddef>
 #include <cstdio>
@@ -111,6 +112,8 @@ template<class D> SearchAlgorithm<D> *getsearch(int argc, const char *argv[]) {
 		return new BeamSearchMM<D>(argc, argv);
 	else if (strcmp(argv[1], "hhatgreedy") == 0)
 		return new Hhatgreedy<D>(argc, argv);
+	else if (strcmp(argv[1], "ees") == 0)
+		return new EES<D>(argc, argv);
 
 	fatal("Unknown algorithm: %s", argv[1]);
 	return NULL;	// Unreachable
