@@ -139,7 +139,7 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 
 	  fopen.pop();
 	  open.remove(bestF->openind);
-	  if(bestFHat->focalind >= 0) {
+	  if(bestF->focalind >= 0) {
 			focal.remove(bestF->focalind);
 	  }
 	  return bestF;
