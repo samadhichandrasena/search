@@ -130,14 +130,18 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 
 	  if(bestFHat->fhat <= wt*bestF->f) {
 			open.pop();
-			focal.remove(bestFHat->focalind);
 			fopen.remove(bestFHat->fopenind);
+			if(bestFHat->focalind >= 0) {
+				focal.remove(bestFHat->focalind);
+			}
 			return bestFHat;
 	  }
 
 	  fopen.pop();
-	  focal.remove(bestF->focalind);
 	  open.remove(bestF->openind);
+	  if(bestFHat->focalind >= 0) {
+			focal.remove(bestF->focalind);
+	  }
 	  return bestF;
 
 	}
@@ -229,9 +233,16 @@ private:
 				dup->op = ops[i];
 				dup->pop = e.revop;
 				open.pushupdate(dup, dup->openind);
-				focal.pushupdate(dup, dup->focalind);
 				fopen.pushupdate(dup, dup->fopenind);
+				if(dup->fhat <= wt * (*open.front())->fhat) {
+					focal.pushupdate(dup, dup->focalind);
+				} else if(dup->focalind >= 0) {
+					focal.remove(dup->focalind);
+				}
 				nodes->destruct(kid);
+ 
+				if (!bestkid || dup->hhat < bestkid->hhat)
+					bestkid = dup;
 			} else {
 				typename D::Cost h = d.h(e.state);
 				kid->h = h;
@@ -246,9 +257,11 @@ private:
 				kid->pop = e.revop;
 				closed.add(kid, hash);
 				open.push(kid);
-				focal.push(kid);
 				fopen.push(kid);
-
+				if(kid->fhat <= wt * (*open.front())->fhat) {
+					focal.push(kid);
+				}
+ 
 				if (!bestkid || kid->hhat < bestkid->hhat)
 					bestkid = kid;
 			}
