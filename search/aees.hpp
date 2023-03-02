@@ -126,24 +126,24 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 
 	  if(bestDHat && bestDHat->fhat <= wt*bestF->f) {
 			focal.pop();
-			open.remove(bestDHat->openind);
-			fopen.remove(bestDHat->fopenind);
+			open.remove(bestDHat);
+			fopen.remove(bestDHat);
 			return bestDHat;
 	  }
 
 	  if(bestFHat->fhat <= wt*bestF->f) {
 			open.pop();
-			fopen.remove(bestFHat->fopenind);
+			fopen.remove(bestFHat);
 			if(bestFHat->focalind >= 0) {
-				focal.remove(bestFHat->focalind);
+				focal.remove(bestFHat);
 			}
 			return bestFHat;
 	  }
 
 	  fopen.pop();
-	  open.remove(bestF->openind);
+	  open.remove(bestF);
 	  if(bestF->focalind >= 0) {
-			focal.remove(bestF->focalind);
+			focal.remove(bestF);
 	  }
 	  return bestF;
 
@@ -277,7 +277,7 @@ private:
 				if(dup->fhat <= wt * (*open.front())->fhat) {
 					focal.pushupdate(dup, dup->focalind);
 				} else if(dup->focalind >= 0) {
-					focal.remove(dup->focalind);
+					focal.remove(dup);
 				}
 				nodes->destruct(kid);
  
