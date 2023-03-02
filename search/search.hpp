@@ -8,6 +8,7 @@
 #include "../structs/intpq.hpp"
 #include "../structs/binheap.hpp"
 #include "../structs/minmaxheap.hpp"
+#include "../structs/RBTree.hpp"
 
 #include "closedlist.hpp"
 

@@ -16,7 +16,7 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 		ClosedEntry<Node, D> closedent;
 
 		// values for tracking location in focal, open, and f-ordered list
-		int openind;
+		bool open;
 		int focalind;
 		int cleanupind;
 
@@ -27,7 +27,7 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 		int d;
 		double hhat, fhat, dhat;
 
-		Node() : openind(-1) {
+		Node() : open(false), focalind(-1), cleanupind(-1) {
 		}
 
 		static ClosedEntry<Node, D> &closedentry(Node *n) {
@@ -78,20 +78,19 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 	};
 
 	struct FHatOps {
-		static void setind(Node *n, int i) {
-			n->openind = i;
-		}
 
-		static int getind(const Node *n) {
-			return n->openind;
+		static double getvalue(const Node *n) {
+			return n->fhat;
 		}
 	
 		static bool pred(Node *a, Node *b) {
+			/*
 			if (a->fhat == b->fhat) {
 				if (a->d == b->d)
 					return a->g > b->g;
 				return a->d < b->d;
 			}
+			*/
 			return a->fhat < b->fhat;
 		}	
 	};
@@ -117,19 +116,22 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 	}
 
 	Node *select_node() {
-	  Node *bestDHat = *focal.front();
-	  Node *bestFHat = *open.front();
+	  Node *bestDHat = NULL;
+	  if(!focal.empty()) {
+		bestDHat = *focal.front();
+	  }
+	  Node *bestFHat = open.front();
 	  Node *bestF = *cleanup.front();
 
-	  if(bestDHat->fhat <= wt*bestF->f) {
-			focal.pop();
+	  if(bestDHat && bestDHat->fhat <= wt*bestF->f) {
+			focal.remove(bestDHat);
 			open.remove(bestDHat);
 			cleanup.remove(bestDHat);
 			return bestDHat;
 	  }
 
 	  if(bestFHat->fhat <= wt*bestF->f) {
-			open.pop();
+			open.remove(bestFHat);
 			cleanup.remove(bestFHat);
 			if(bestFHat->focalind >= 0) {
 				focal.remove(bestFHat);
@@ -137,7 +139,7 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 			return bestFHat;
 	  }
 
-	  cleanup.pop();
+	  cleanup.remove(bestF);
 	  open.remove(bestF);
 	  if(bestF->focalind >= 0) {
 			focal.remove(bestF);
@@ -155,6 +157,21 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 		open.push(n0);
 		focal.push(n0);
 		cleanup.push(n0);
+
+		fhatmin = n0->fhat;
+
+		bool isIncrease;
+		// Dummy node to represent weighted n0.
+		Node *dummy = new Node();
+		dummy->d = wt * n0->d;
+		dummy->g = wt * n0->g;
+		dummy->h = wt * n0->h;
+		dummy->f = n0->g + n0->h;
+		dummy->dhat = dummy->d;
+		dummy->hhat = dummy->h;
+		dummy->fhat = dummy->f;
+
+		open.updateCursor(dummy, isIncrease);
 
 		while (!open.empty() && !SearchAlgorithm<D>::limit()) {
 			Node *n = select_node();
@@ -221,21 +238,23 @@ private:
 					nodes->destruct(kid);
 					continue;
 				}
-				if (dup->openind < 0)
+				if (dup->cleanupind >= 0) {
 					this->res.reopnd++;
+					open.remove(dup);
+				}
 				dup->f = dup->f - dup->g + kid->g;
 				dup->g = kid->g;
 				double dhat = dup->d / (1 - derror);
 				double hhat = dup->h + (herror * dhat);
-				dup->dhat = dhat;
 				dup->hhat = hhat;
+				dup->dhat = dhat;
 				dup->fhat = dup->g + dup->hhat;
 				dup->parent = n;
 				dup->op = ops[i];
 				dup->pop = e.revop;
-				open.pushupdate(dup, dup->openind);
+				open.push(dup);
 				cleanup.pushupdate(dup, dup->cleanupind);
-				if(dup->fhat <= wt * (*open.front())->fhat) {
+				if(dup->fhat <= wt * fhatmin) {
 					focal.pushupdate(dup, dup->focalind);
 				} else if(dup->focalind >= 0) {
 					focal.remove(dup);
@@ -251,8 +270,8 @@ private:
 				kid->d = d.d(e.state);
 				double dhat = kid->d / (1 - derror);
 				double hhat = kid->h + (herror * dhat);
-				kid->dhat = dhat;
 				kid->hhat = hhat;
+				kid->dhat = dhat;
 				kid->fhat = kid->g + kid->hhat;
 				kid->parent = n;
 				kid->op = ops[i];
@@ -260,7 +279,7 @@ private:
 				closed.add(kid, hash);
 				open.push(kid);
 				cleanup.push(kid);
-				if(kid->fhat <= wt * (*open.front())->fhat) {
+				if(kid->fhat <= wt * fhatmin) {
 					focal.push(kid);
 				}
  
@@ -291,6 +310,34 @@ private:
 		  herror = herrnext;
 		  derror = derrnext;
 		}
+
+		Node *bestFHat = open.front();
+
+		if(bestFHat->fhat != fhatmin) {
+			fhatmin = bestFHat->fhat;
+		    
+			
+			// Dummy node to represent weighted fhat min.
+			Node *dummy = new Node();
+			dummy->g = wt * bestFHat->g;
+			dummy->h = wt * bestFHat->h;
+			dummy->d = wt * bestFHat->d;
+			dummy->f = wt * bestFHat->f;
+			dummy->dhat = wt * bestFHat->dhat;
+			dummy->hhat = wt * bestFHat->hhat;
+			dummy->fhat = dummy->g + dummy->hhat;
+
+			bool isIncrease;
+			auto itemsNeedUpdate = open.updateCursor(dummy, isIncrease);
+
+			for (Node *item : itemsNeedUpdate) {
+				if (isIncrease && item->focalind == -1) {
+					focal.push(item);
+				} else if(item->focalind != -1) {
+					focal.remove(item);
+				}
+			}
+		}
 	}
 
 	Node *init(D &d, State &s0) {
@@ -313,11 +360,12 @@ private:
 
 	bool dropdups;
 	double wt;
-	BinHeap<FHatOps, Node*> open;
+	RBTree<FHatOps, Node*> open;
 	BinHeap<DHatOps, Node*> focal;
 	BinHeap<FOps, Node*> cleanup;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
+	double fhatmin;
 
     int imExp = 10;
 };
