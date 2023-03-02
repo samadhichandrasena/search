@@ -18,7 +18,7 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 		// values for tracking location in focal, open, and f-ordered list
 		int openind;
 		int focalind;
-		int fopenind;
+		int cleanupind;
 
 		Node *parent;
 		PackedState state;
@@ -41,11 +41,11 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 
 	struct FOps {
 		static void setind(Node *n, int i) {
-			n->fopenind = i;
+			n->cleanupind = i;
 		}
 
 		static int getind(const Node *n) {
-			return n->fopenind;
+			return n->cleanupind;
 		}
 	
 		static bool pred(Node *a, Node *b) {
@@ -119,28 +119,28 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 	Node *select_node() {
 	  Node *bestDHat = *focal.front();
 	  Node *bestFHat = *open.front();
-	  Node *bestF = *fopen.front();
+	  Node *bestF = *cleanup.front();
 
 	  if(bestDHat->fhat <= wt*bestF->f) {
 			focal.pop();
-			open.remove(bestDHat->openind);
-			fopen.remove(bestDHat->fopenind);
+			open.remove(bestDHat);
+			cleanup.remove(bestDHat);
 			return bestDHat;
 	  }
 
 	  if(bestFHat->fhat <= wt*bestF->f) {
 			open.pop();
-			fopen.remove(bestFHat->fopenind);
+			cleanup.remove(bestFHat);
 			if(bestFHat->focalind >= 0) {
-				focal.remove(bestFHat->focalind);
+				focal.remove(bestFHat);
 			}
 			return bestFHat;
 	  }
 
-	  fopen.pop();
-	  open.remove(bestF->openind);
+	  cleanup.pop();
+	  open.remove(bestF);
 	  if(bestF->focalind >= 0) {
-			focal.remove(bestF->focalind);
+			focal.remove(bestF);
 	  }
 	  return bestF;
 
@@ -154,7 +154,7 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 		closed.add(n0);
 		open.push(n0);
 		focal.push(n0);
-		fopen.push(n0);
+		cleanup.push(n0);
 
 		while (!open.empty() && !SearchAlgorithm<D>::limit()) {
 			Node *n = select_node();
@@ -174,7 +174,7 @@ template <class D> struct EES : public SearchAlgorithm<D> {
 		SearchAlgorithm<D>::reset();
 		open.clear();
 		focal.clear();
-		fopen.clear();
+		cleanup.clear();
 		closed.clear();
 		delete nodes;
 		nodes = new Pool<Node>();
@@ -227,21 +227,22 @@ private:
 				dup->g = kid->g;
 				double dhat = dup->d / (1 - derror);
 				double hhat = dup->h + (herror * dhat);
+				dup->dhat = dhat;
 				dup->hhat = hhat;
 				dup->fhat = dup->g + dup->hhat;
 				dup->parent = n;
 				dup->op = ops[i];
 				dup->pop = e.revop;
 				open.pushupdate(dup, dup->openind);
-				fopen.pushupdate(dup, dup->fopenind);
+				cleanup.pushupdate(dup, dup->cleanupind);
 				if(dup->fhat <= wt * (*open.front())->fhat) {
 					focal.pushupdate(dup, dup->focalind);
 				} else if(dup->focalind >= 0) {
-					focal.remove(dup->focalind);
+					focal.remove(dup);
 				}
 				nodes->destruct(kid);
  
-				if (!bestkid || dup->hhat < bestkid->hhat)
+				if (!bestkid || dup->f < bestkid->f)
 					bestkid = dup;
 			} else {
 				typename D::Cost h = d.h(e.state);
@@ -250,6 +251,7 @@ private:
 				kid->d = d.d(e.state);
 				double dhat = kid->d / (1 - derror);
 				double hhat = kid->h + (herror * dhat);
+				kid->dhat = dhat;
 				kid->hhat = hhat;
 				kid->fhat = kid->g + kid->hhat;
 				kid->parent = n;
@@ -257,12 +259,12 @@ private:
 				kid->pop = e.revop;
 				closed.add(kid, hash);
 				open.push(kid);
-				fopen.push(kid);
+				cleanup.push(kid);
 				if(kid->fhat <= wt * (*open.front())->fhat) {
 					focal.push(kid);
 				}
  
-				if (!bestkid || kid->hhat < bestkid->hhat)
+				if (!bestkid || kid->f < bestkid->f)
 					bestkid = kid;
 			}
 		}
@@ -313,7 +315,7 @@ private:
 	double wt;
 	BinHeap<FHatOps, Node*> open;
 	BinHeap<DHatOps, Node*> focal;
-	BinHeap<FOps, Node*> fopen;
+	BinHeap<FOps, Node*> cleanup;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
 

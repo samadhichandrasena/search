@@ -61,23 +61,8 @@ public:
 	// i.e., i < 0 means that the element is not in the priority queue
 	// and i >= 0 means that the element is at the given index. O(lg
 	// n) time.
-	void remove(long i) {
-		if (i  < 0)
-			fatal("Removing an invalid heap index: %ld, size=%lu\n", i, heap.size());
-		else {
-			Elm res = heap[i];
-			if(size() == 1 || i == size()-1) {
-				heap.pop_back();
-			} else if(i == 0) {
-			  pop();
-			} else {
-				heap[i] = heap.back();
-				heap.pop_back();
-				Ops::setind(heap[i], i);
-			    update(i);
-			} 
-			Ops::setind(res, -1);
-		}
+	void remove(Elm e) {
+		remove(Ops::getind(e));
 	}
 
 	// pushupdate either pushes the element or updates it's
@@ -183,6 +168,29 @@ private:
 		Elm tmp = heap[i];
 		heap[i] = heap[j];
 		heap[j] = tmp;
+	}
+
+	// removes the element at the given index and repairs the heap.
+	// Note that the index value must be tracked properly, i.e., i < 0
+	// means that the element is not in the priority queue and i >= 0
+	// means that the element is at the given index. O(lg n) time.
+	void remove(long i) {
+		if (i  < 0)
+			fatal("Removing an invalid heap index: %ld, size=%lu\n", i, heap.size());
+		else {
+			Elm res = heap[i];
+			if(size() == 1 || i == size()-1) {
+				heap.pop_back();
+			} else if(i == 0) {
+				pop();
+			} else {
+				heap[i] = heap.back();
+				heap.pop_back();
+				Ops::setind(heap[i], i);
+			    update(i);
+			} 
+			Ops::setind(res, -1);
+		}
 	}
 
 	std::vector<Elm> heap;
