@@ -16,9 +16,9 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 		ClosedEntry<Node, D> closedent;
 
 		// values for tracking location in focal, open, and f-ordered list
-		int openind;
+		bool open;
 		int focalind;
-		int fopenind;
+		int cleanupind;
 
 		Node *parent;
 		PackedState state;
@@ -27,7 +27,7 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 		int d;
 		double hhat, fhat, dhat;
 
-		Node() : openind(-1), focalind(-1), fopenind(-1) {
+		Node() : open(false), focalind(-1), cleanupind(-1) {
 		}
 
 		static ClosedEntry<Node, D> &closedentry(Node *n) {
@@ -41,11 +41,11 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 
 	struct FOps {
 		static void setind(Node *n, int i) {
-			n->fopenind = i;
+			n->cleanupind = i;
 		}
 
 		static int getind(const Node *n) {
-			return n->fopenind;
+			return n->cleanupind;
 		}
 	
 		static bool pred(Node *a, Node *b) {
@@ -78,20 +78,19 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 	};
 
 	struct FHatOps {
-		static void setind(Node *n, int i) {
-			n->openind = i;
-		}
 
-		static int getind(const Node *n) {
-			return n->openind;
+		static double getvalue(const Node *n) {
+			return n->fhat;
 		}
 	
 		static bool pred(Node *a, Node *b) {
+			/*
 			if (a->fhat == b->fhat) {
 				if (a->d == b->d)
 					return a->g > b->g;
 				return a->d < b->d;
 			}
+			*/
 			return a->fhat < b->fhat;
 		}	
 	};
@@ -121,26 +120,26 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 	  if(!focal.empty()) {
 		bestDHat = *focal.front();
 	  }
-	  Node *bestFHat = *open.front();
-	  Node *bestF = *fopen.front();
+	  Node *bestFHat = open.front();
+	  Node *bestF = *cleanup.front();
 
 	  if(bestDHat && bestDHat->fhat <= wt*bestF->f) {
-			focal.pop();
+			focal.remove(bestDHat);
 			open.remove(bestDHat);
-			fopen.remove(bestDHat);
+			cleanup.remove(bestDHat);
 			return bestDHat;
 	  }
 
 	  if(bestFHat->fhat <= wt*bestF->f) {
-			open.pop();
-			fopen.remove(bestFHat);
+			open.remove(bestFHat);
+			cleanup.remove(bestFHat);
 			if(bestFHat->focalind >= 0) {
 				focal.remove(bestFHat);
 			}
 			return bestFHat;
 	  }
 
-	  fopen.pop();
+	  cleanup.remove(bestF);
 	  open.remove(bestF);
 	  if(bestF->focalind >= 0) {
 			focal.remove(bestF);
@@ -153,14 +152,14 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 		if(!cand || n->g < cand->g) {
 			cand = n;
 			sol_count++;
+			if(cleanup.empty()) {
+				  wt = 1.0;
+			} else {
+				  wt = cand->g / (*cleanup.front())->f;
+			}
 			dfrow(stdout, "incumbent", "uuuggg", sol_count, this->res.expd,
 				  this->res.gend, wt, (float)cand->g,
 				  walltime() - this->res.wallstart);
-			if(fopen.empty()) {
-				  wt = 1.0;
-			} else {
-				  wt = cand->g / (*fopen.front())->f;
-			}
 		}
 	}
 
@@ -172,19 +171,40 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 		closed.add(n0);
 		open.push(n0);
 		focal.push(n0);
-		fopen.push(n0);
+		cleanup.push(n0);
+
+		fhatmin = n0->fhat;
 
 		sol_count = 0;
 		dfrowhdr(stdout, "incumbent", 6, "num", "nodes expanded",
 				 "nodes generated", "solution bound", "solution cost",
 				 "wall time");
 
+		bool isIncrease;
+		// Dummy node to represent weighted n0.
+		Node *dummy = new Node();
+		dummy->d = wt * n0->d;
+		dummy->g = wt * n0->g;
+		dummy->h = wt * n0->h;
+		dummy->f = n0->g + n0->h;
+		dummy->dhat = dummy->d;
+		dummy->hhat = dummy->h;
+		dummy->fhat = dummy->f;
+
+		open.updateCursor(dummy, isIncrease);
+
 		while (!open.empty() && !SearchAlgorithm<D>::limit()) {
 			Node *n = select_node();
+
+			if(cand && n->f >= cand->f) {
+				continue;
+			}
+			
 			State buf, &state = d.unpack(buf, n->state);
 
 			if(d.isgoal(state)) {
 				goalfound(n);
+				continue;
 			}
 
 			expand(d, n, state);
@@ -200,7 +220,7 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 		SearchAlgorithm<D>::reset();
 		open.clear();
 		focal.clear();
-		fopen.clear();
+		cleanup.clear();
 		closed.clear();
 		delete nodes;
 		nodes = new Pool<Node>();
@@ -221,10 +241,6 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 private:
 
 	void expand(D &d, Node *n, State &state) {
-		if(cand && n->f > cand->f) {
-			return;
-		}
-	  
 		SearchAlgorithm<D>::res.expd++;
 
         double herrnext = 0;
@@ -245,13 +261,12 @@ private:
 			kid->h = h;
 			kid->f = kid->g + h;
 			kid->d = d.d(e.state);
+			d.pack(kid->state, e.state);
 
 			if(cand && kid->f >= cand->g) {
 				nodes->destruct(kid);
 				continue;
 			}
-			
-			d.pack(kid->state, e.state);
 
 			unsigned long hash = kid->state.hash(&d);
 			Node *dup = static_cast<Node*>(closed.find(kid->state, hash));
@@ -261,32 +276,40 @@ private:
 					nodes->destruct(kid);
 					continue;
 				}
-				if (dup->openind < 0)
+				if (dup->cleanupind >= 0) {
 					this->res.reopnd++;
+					open.remove(dup);
+				}
 				dup->f = dup->f - dup->g + kid->g;
 				dup->g = kid->g;
 				double dhat = dup->d / (1 - derror);
 				double hhat = dup->h + (herror * dhat);
 				dup->hhat = hhat;
+				dup->dhat = dhat;
 				dup->fhat = dup->g + dup->hhat;
 				dup->parent = n;
 				dup->op = ops[i];
 				dup->pop = e.revop;
-				open.pushupdate(dup, dup->openind);
-				fopen.pushupdate(dup, dup->fopenind);
-				if(dup->fhat <= wt * (*open.front())->fhat) {
+				open.push(dup);
+				cleanup.pushupdate(dup, dup->cleanupind);
+				if(dup->fhat <= wt * fhatmin) {
 					focal.pushupdate(dup, dup->focalind);
 				} else if(dup->focalind >= 0) {
 					focal.remove(dup);
 				}
 				nodes->destruct(kid);
  
-				if (!bestkid || dup->hhat < bestkid->hhat)
+				if (!bestkid || dup->f < bestkid->f)
 					bestkid = dup;
 			} else {
+				typename D::Cost h = d.h(e.state);
+				kid->h = h;
+				kid->f = kid->g + h;
+				kid->d = d.d(e.state);
 				double dhat = kid->d / (1 - derror);
 				double hhat = kid->h + (herror * dhat);
 				kid->hhat = hhat;
+				kid->dhat = dhat;
 				kid->fhat = kid->g + kid->hhat;
 				kid->parent = n;
 				kid->op = ops[i];
@@ -295,12 +318,12 @@ private:
 					closed.add(kid, hash);
 				}
 				open.push(kid);
-				fopen.push(kid);
-				if(kid->fhat <= wt * (*open.front())->fhat) {
+				cleanup.push(kid);
+				if(kid->fhat <= wt * fhatmin) {
 					focal.push(kid);
 				}
  
-				if (!bestkid || kid->hhat < bestkid->hhat)
+				if (!bestkid || kid->f < bestkid->f)
 					bestkid = kid;
 			}
 		}
@@ -327,6 +350,37 @@ private:
 		  herror = herrnext;
 		  derror = derrnext;
 		}
+
+		if(cleanup.empty())
+		  return;
+
+		Node *bestFHat = open.front();
+
+		if(bestFHat->fhat != fhatmin) {
+			fhatmin = bestFHat->fhat;
+		    
+			
+			// Dummy node to represent weighted fhat min.
+			Node *dummy = new Node();
+			dummy->g = wt * bestFHat->g;
+			dummy->h = wt * bestFHat->h;
+			dummy->d = wt * bestFHat->d;
+			dummy->f = wt * bestFHat->f;
+			dummy->dhat = wt * bestFHat->dhat;
+			dummy->hhat = wt * bestFHat->hhat;
+			dummy->fhat = dummy->g + dummy->hhat;
+
+			bool isIncrease;
+			auto itemsNeedUpdate = open.updateCursor(dummy, isIncrease);
+
+			for (Node *item : itemsNeedUpdate) {
+				if (isIncrease && item->focalind == -1) {
+					focal.push(item);
+				} else if(item->focalind != -1) {
+					focal.remove(item);
+				}
+			}
+		}
 	}
 
 	Node *init(D &d, State &s0) {
@@ -350,11 +404,12 @@ private:
 
 	bool dropdups;
 	double wt;
-	BinHeap<FHatOps, Node*> open;
+	RBTree<FHatOps, Node*> open;
 	BinHeap<DHatOps, Node*> focal;
-	BinHeap<FOps, Node*> fopen;
+	BinHeap<FOps, Node*> cleanup;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
+	double fhatmin;
 	Node *cand;
 	int sol_count;
 
