@@ -183,13 +183,13 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 		bool isIncrease;
 		// Dummy node to represent weighted n0.
 		Node *dummy = new Node();
-		dummy->d = wt * n0->d;
-		dummy->g = wt * n0->g;
-		dummy->h = wt * n0->h;
+		dummy->d = n0->d;
+		dummy->g = n0->g;
+		dummy->h = n0->h;
 		dummy->f = n0->g + n0->h;
-		dummy->dhat = dummy->d;
-		dummy->hhat = dummy->h;
-		dummy->fhat = dummy->f;
+		dummy->dhat = wt * dummy->d;
+		dummy->hhat = wt * dummy->h;
+		dummy->fhat = wt * dummy->f;
 
 		open.updateCursor(dummy, isIncrease);
 
@@ -362,13 +362,13 @@ private:
 			
 			// Dummy node to represent weighted fhat min.
 			Node *dummy = new Node();
-			dummy->g = wt * bestFHat->g;
-			dummy->h = wt * bestFHat->h;
-			dummy->d = wt * bestFHat->d;
-			dummy->f = wt * bestFHat->f;
+			dummy->g = bestFHat->g;
+			dummy->h = bestFHat->h;
+			dummy->d = bestFHat->d;
+			dummy->f = bestFHat->f;
 			dummy->dhat = wt * bestFHat->dhat;
 			dummy->hhat = wt * bestFHat->hhat;
-			dummy->fhat = dummy->g + dummy->hhat;
+			dummy->fhat = wt * dummy->g + dummy->hhat;
 
 			bool isIncrease;
 			auto itemsNeedUpdate = open.updateCursor(dummy, isIncrease);
