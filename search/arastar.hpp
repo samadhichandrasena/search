@@ -99,17 +99,26 @@ template <class D> struct Arastar : public SearchAlgorithm<D> {
 			incons(30000001), cost(-1) {
 
 		wt0 = dwt = -1;
+		wsched = false;
+		w_ind = -1;
 		for (int i = 0; i < argc; i++) {
 			if (i < argc - 1 && strcmp(argv[i], "-wt0") == 0)
 				wt0 = strtod(argv[++i], NULL);
 			else if (i < argc - 1 && strcmp(argv[i], "-dwt") == 0)
 				dwt = strtod(argv[++i], NULL);
+			else if (i < argc - 1 && strcmp(argv[i], "-wsched") == 0)
+				wsched = true;
 		}
 
-		if (wt0 < 1)
-			fatal("Must specify initial weight ≥ 1 using -wt0");
-		if (dwt <= 0)
-			fatal("Must specify weight decrement > 0 using -dwt");
+		if(!wsched) {
+			if (wt0 < 1)
+				fatal("Must specify initial weight ≥ 1 using -wt0");
+			if (dwt <= 0)
+				fatal("Must specify weight decrement > 0 using -dwt");
+		} else {
+			w_ind = 0;
+			wt0 = schedule[w_ind];
+		}
 
 		wt = wt0;
 		nodes = new Pool<Node>();
@@ -170,17 +179,30 @@ template <class D> struct Arastar : public SearchAlgorithm<D> {
 		closed.prstats(stdout, "closed ");
 		dfpair(stdout, "open list type", "%s", "binary heap");
 		dfpair(stdout, "node size", "%u", sizeof(Node));
-		dfpair(stdout, "initial weight", "%g", wt0);
-		dfpair(stdout, "weight decrement", "%g", dwt);
+		if(!wsched) {
+			dfpair(stdout, "initial weight", "%g", wt0);
+			dfpair(stdout, "weight decrement", "%g", dwt);
+		} else {
+			dfpair(stdout, "weight schedule", "{5, 3, 2, 1.5, 1}");
+		}
 	}
 
 protected:
 
 	// nextwt decrements the weight by the given value.
 	void nextwt() {
-		wt = wt - dwt > 1.0 ? wt - dwt : 1.0;
-		if (wt < 1.0 + sqrt(std::numeric_limits<double>::epsilon()))
-			wt = 1.0;
+		if (wsched) {
+			w_ind++;
+			if(w_ind < nweights) {
+				wt = schedule[w_ind];
+			} else {
+				wt = 1.0;
+			}
+		} else {
+			wt = wt - dwt > 1.0 ? wt - dwt : 1.0;
+			if (wt < 1.0 + sqrt(std::numeric_limits<double>::epsilon()))
+				wt = 1.0;
+		}
 	}
 
 	// rowhdr outputs the incumbent solution row header line.
@@ -333,6 +355,10 @@ protected:
  	ClosedList<Node, Node, D> closed;
 	Incons incons;
 	Pool<Node> *nodes;
+	bool wsched;
+	int w_ind;
+	double schedule[5] = {5, 3, 2, 1.5, 1};
+	int nweights = 5;
 
 	double cost;	// solution cost
 };
