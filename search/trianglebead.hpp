@@ -326,7 +326,7 @@ private:
 		  cand = kid;
 		  sol_count++;
 		  dfrow(stdout, "incumbent", "uuugg", sol_count, this->res.expd,
-				this->res.gend, cand->g,
+				this->res.gend, (float)cand->g,
 				walltime() - this->res.wallstart);
 		  return;
 		} else if(cand && cand->g <= kid->f) {
