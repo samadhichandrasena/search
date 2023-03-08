@@ -66,8 +66,8 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 	struct RingNode {
 	  RingNode *next;
 	  RingNode *prev;
-	  OpenList<Node, Node, Cost> *list;
-	  RingNode(OpenList<Node, Node, Cost> *l) {
+	  OpenList<Node, Node, double> *list;
+	  RingNode(OpenList<Node, Node, double> *l) {
 		next = NULL;
 		prev = NULL;
 		list = l;
@@ -119,7 +119,7 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 
 	  void add() {
 		if(begin->prev == end) {
-		  RingNode *n = new RingNode(new OpenList<Node, Node, Cost>());
+		  RingNode *n = new RingNode(new OpenList<Node, Node, double>());
 		  n->next = begin->next;
 		  n->prev = begin;
 		  begin->next->prev = n;
@@ -352,7 +352,7 @@ private:
 
     bool dropdups;
     Ring openlists;
- 	OpenList<Node, Node, Cost> *open;
+ 	OpenList<Node, Node, double> *open;
  	ClosedList<Node, Node, D> closed;
 	Pool<Node> *nodes;
 	Node *cand;
