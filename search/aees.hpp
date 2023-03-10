@@ -97,16 +97,13 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 
 	AnytimeEES(int argc, const char *argv[]) :
 			SearchAlgorithm<D>(argc, argv), herror(0), derror(0), 
-			dropdups(false), wt(-1.0), closed(30000001) {
+			dropdups(false), closed(30000001) {
 		for (int i = 0; i < argc; i++) {
-			if (i < argc - 1 && strcmp(argv[i], "-wt0") == 0)
-				wt = strtod(argv[++i], NULL);
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
 		}
 
-		if (wt < 1)
-			fatal("Must specify a starting weight ≥1 weight using -wt0");
+		wt = std::numeric_limits<double>::infinity();
 
 		nodes = new Pool<Node>();
 	}
