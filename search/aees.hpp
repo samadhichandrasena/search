@@ -1,6 +1,7 @@
 // Copyright © 2013 the Search Authors under the MIT license. See AUTHORS for the list of authors.
 #include "../search/search.hpp"
 #include "../utils/pool.hpp"
+#include "float.h"
 
 void fatal(const char*, ...);	// utils.hpp
 
@@ -103,7 +104,7 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 				dropdups = true;
 		}
 
-		wt = std::numeric_limits<double>::infinity();
+		wt = FLT_MAX;
 
 		nodes = new Pool<Node>();
 	}
@@ -152,7 +153,7 @@ template <class D> struct AnytimeEES : public SearchAlgorithm<D> {
 			if(cleanup.empty()) {
 				  wt = 1.0;
 			} else {
-				  wt = cand->g / (*cleanup.front())->f;
+			  wt = (double)cand->g / (*cleanup.front())->f;
 			}
 			dfrow(stdout, "incumbent", "uuuggg", sol_count, this->res.expd,
 				  this->res.gend, wt, (float)cand->g,
