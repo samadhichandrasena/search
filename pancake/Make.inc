@@ -1,10 +1,12 @@
 pancake:\
 	pancake/50pancake_solver\
-	pancake/70pancake_solver
+	pancake/70pancake_solver\
+	pancake/100pancake_solver
 
 CLEAN+=\
 	pancake/50pancake_solver\
-	pancake/70pancake_solver
+	pancake/70pancake_solver\
+	pancake/100pancake_solver
 
 EVERYTHING+=pancake
 
