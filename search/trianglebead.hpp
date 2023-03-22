@@ -156,9 +156,12 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 	TriangleBeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
+		slope = 1;
 		for (int i = 0; i < argc; i++) {
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
+			if (i < argc - 1 && strcmp(argv[i], "-slope") == 0)
+				slope = strtod(argv[++i], NULL);
 		}
     
 		nodes = new Pool<Node>();
@@ -214,6 +217,8 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		open_count = 0;
 
 		expand(d, n0, s0);
+		int depth_todo = int(slope);
+		int exp_todo = int(ceil(1/slope));
 
 		sol_count = 0;
 		depth = 1;
@@ -233,11 +238,20 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  bool looped = false;
 			
 		  while(!looped) {
-			Node *n = NULL;
+			Node *arr[exp_todo];
+			bool some_exp = false;
+			for(int i = 0; i < exp_todo; i++) {
+			  Node *n = NULL;
 				  
-			while(!n && !open->empty()) {
-			  n = dedup(d, open->pop());
-			  open_count--;
+			  while(!n && !open->empty()) {
+				n = dedup(d, open->pop());
+				open_count--;
+			  }
+			  
+			  arr[i] = n;
+
+			  if(n)
+				some_exp = true;
 			}
 
 			if(open_it->prev != openlists.begin) {
@@ -247,21 +261,29 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 			  openlists.add();
 			  open_it = openlists.begin->next;
 			  open = open_it->list;
-			  looped = true;
+			  if(--depth_todo > 0) {
+				depth_todo--;
+			  } else {
+				looped = true;
+			  }
 			}
 
-			if(n)
+			if(some_exp)
 			  last_filled = open_it;
 
-			if(!n) {
-			  if(done) {
+			if(!some_exp && done) {
 				openlists.remove();
-			  }
-			  continue;
+				continue;
 			}
-				  
-			State buf, &state = d.unpack(buf, n->state);
-			expand(d, n, state);
+
+			
+			for(int i = 0; i < exp_todo; i++) {
+			  Node *n = arr[i];
+			  if(!n)
+				continue;
+			  State buf, &state = d.unpack(buf, n->state);
+			  expand(d, n, state);
+			}
 		    
 			
 			done = false;
@@ -270,6 +292,8 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  if(last_filled != openlists.begin->next) {
 			openlists.remove_rest(last_filled);
 		  }
+		  
+		  depth_todo = slope;
 		}
 
 		if(cand) {
@@ -343,7 +367,7 @@ private:
 	Node *init(D &d, State &s0) {
 		Node *n0 = nodes->construct();
 		d.pack(n0->state, s0);
-		n0->d = 0;
+		n0->d = d.d(s0);
 		n0->g = Cost(0);
 		n0->f = d.h(s0);
 		n0->pop = n0->op = D::Nop;
@@ -362,5 +386,6 @@ private:
 	int depth;
 	int open_count;
 	int sol_count;
+	double slope;
   
 };
