@@ -48,6 +48,11 @@ public:
 	State initialstate(void) const;
 
 	Cost h(const State &s) const {
+
+		if (s.ndirt == 0) {
+			return 0;
+		}
+		
 		unsigned int i;
 		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
 			;
@@ -71,11 +76,22 @@ public:
 				maxy = y;
 		}
 
+		std::pair<int, int> pt = map->coord(s.loc);
+		int agentx = pt.first;
+		int agenty = pt.second;
 		assert(s.weight > 0);
-		return s.ndirt + ((maxx-minx) + (maxy-miny)) * s.weight;
+		int dist = ((maxx-minx) + (maxy-miny)) +
+		  std::min(abs(agentx - minx), abs(agentx - maxx)) +
+		  std::min(abs(agenty - miny), abs(agenty - maxy));
+		return s.ndirt + dist * s.weight;
 	}
 
 	Cost d(const State &s) const {
+
+		if (s.ndirt == 0) {
+			return 0;
+		}
+		  
 		unsigned int i;
 		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
 			;
@@ -99,7 +115,14 @@ public:
 				maxy = y;
 		}
 
-		return s.ndirt + (maxx-minx) + (maxy-miny);
+		auto pt = map->coord(s.loc);
+		int agentx = pt.first;
+		int agenty = pt.second;
+		assert(s.weight > 0);
+		int dist = ((maxx-minx) + (maxy-miny)) +
+		  std::min(abs(agentx - minx), abs(agentx - maxx)) +
+		  std::min(abs(agenty - miny), abs(agenty - maxy));
+		return s.ndirt + dist;
 	}
 
 	bool isgoal(const State &s) const {
