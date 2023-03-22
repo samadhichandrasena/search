@@ -170,7 +170,8 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 
 	Node *dedup(D &d, Node *n) {
 
-	  if(cand && n->f >= cand->f) {
+	  if(cand && n->f >= cand->g) {
+		nodes->destruct(n);
 		return NULL;
 	  }
 	  
@@ -190,6 +191,7 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  dup->op = n->op;
 		  dup->pop = n->pop;
 		} else {
+		  nodes->destruct(n);
 		  return NULL;
 		}
 	  }
