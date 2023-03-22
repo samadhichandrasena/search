@@ -106,7 +106,7 @@ template <class D> struct Arastar : public SearchAlgorithm<D> {
 				wt0 = strtod(argv[++i], NULL);
 			else if (i < argc - 1 && strcmp(argv[i], "-dwt") == 0)
 				dwt = strtod(argv[++i], NULL);
-			else if (i < argc - 1 && strcmp(argv[i], "-wsched") == 0)
+			else if (strcmp(argv[i], "-wsched") == 0)
 				wsched = true;
 		}
 
