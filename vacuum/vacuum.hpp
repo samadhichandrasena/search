@@ -52,6 +52,10 @@ public:
 		if (s.ndirt == 0) {
 			return 0;
 		}
+	    
+		std::pair<int, int> pt = map->coord(s.loc);
+		int agentx = pt.first;
+		int agenty = pt.second;
 		
 		unsigned int i;
 		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
@@ -61,6 +65,8 @@ public:
 		int maxx = minx;
 		int miny = dirtLocs[i].second;
 		int maxy = miny;
+		int neardirtx = abs(dirtLocs[i].first - agentx);
+		int neardirty = abs(dirtLocs[i].second - agenty);
 
 		for (i++; i < s.dirt->size(); i++) {
 			if (!s.dirt->at(i))
@@ -74,15 +80,17 @@ public:
 				miny = y;
 			if (y > maxy)
 				maxy = y;
+			neardirtx = std::min(neardirtx, abs(dirtLocs[i].first - agentx));
+			neardirty = std::min(neardirty, abs(dirtLocs[i].second - agenty));
 		}
 
-		std::pair<int, int> pt = map->coord(s.loc);
-		int agentx = pt.first;
-		int agenty = pt.second;
+		int agent_dist = neardirtx + neardirty;
+
+		/*int edge_dist = std::min(abs(agentx - minx), abs(agentx - maxx)) +
+		  std::min(abs(agenty - miny), abs(agenty - maxy));*/
+		
 		assert(s.weight > 0);
-		int dist = ((maxx-minx) + (maxy-miny)) +
-		  std::min(abs(agentx - minx), abs(agentx - maxx)) +
-		  std::min(abs(agenty - miny), abs(agenty - maxy));
+		int dist = ((maxx-minx) + (maxy-miny)) + agent_dist;
 		return s.ndirt + dist * s.weight;
 	}
 
@@ -91,7 +99,11 @@ public:
 		if (s.ndirt == 0) {
 			return 0;
 		}
-		  
+	    
+		std::pair<int, int> pt = map->coord(s.loc);
+		int agentx = pt.first;
+		int agenty = pt.second;
+		
 		unsigned int i;
 		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
 			;
@@ -100,6 +112,8 @@ public:
 		int maxx = minx;
 		int miny = dirtLocs[i].second;
 		int maxy = miny;
+		int neardirtx = abs(dirtLocs[i].first - agentx);
+		int neardirty = abs(dirtLocs[i].second - agenty);
 
 		for (i++; i < s.dirt->size(); i++) {
 			if (!s.dirt->at(i))
@@ -113,16 +127,18 @@ public:
 				miny = y;
 			if (y > maxy)
 				maxy = y;
+			neardirtx = std::min(neardirtx, abs(dirtLocs[i].first - agentx));
+			neardirty = std::min(neardirty, abs(dirtLocs[i].second - agenty));
 		}
 
-		std::pair<int, int> pt = map->coord(s.loc);
-		int agentx = pt.first;
-		int agenty = pt.second;
+		int agent_dist = neardirtx + neardirty;
+
+		/*int edge_dist = std::min(abs(agentx - minx), abs(agentx - maxx)) +
+		  std::min(abs(agenty - miny), abs(agenty - maxy));*/
+		
 		assert(s.weight > 0);
-		int dist = ((maxx-minx) + (maxy-miny)) +
-		  std::min(abs(agentx - minx), abs(agentx - maxx)) +
-		  std::min(abs(agenty - miny), abs(agenty - maxy));
-		return s.ndirt + dist;
+		int dist = ((maxx-minx) + (maxy-miny)) + agent_dist;
+		return s.ndirt + dist * 1.0;
 	}
 
 	bool isgoal(const State &s) const {
