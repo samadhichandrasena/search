@@ -115,7 +115,7 @@ public:
 				maxy = y;
 		}
 
-		auto pt = map->coord(s.loc);
+		std::pair<int, int> pt = map->coord(s.loc);
 		int agentx = pt.first;
 		int agenty = pt.second;
 		assert(s.weight > 0);
