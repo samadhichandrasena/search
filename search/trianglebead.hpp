@@ -120,33 +120,33 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 	  void add() {
 		if(begin->prev == end) {
 		  RingNode *n = new RingNode(new OpenList<Node, Node, double>());
-		  n->next = begin->next;
-		  n->prev = begin;
-		  begin->next->prev = n;
-		  begin->next = n;
+		  n->prev = end->prev;
+		  n->next = end;
+		  end->prev->next = n;
+		  end->prev = n;
 		  maxsize++;
 		  size++;
 		} else {
-		  move_after(begin->prev, begin);
+		  move_after(begin->prev, end->prev);
 		  size++;
 		  reused++;
 		}
 	  }
 
 	  void remove_rest(RingNode *from) {
-		RingNode *a = from->prev;
-		RingNode *b = begin->next;
+		RingNode *a = from->next;
+		RingNode *b = end->prev;
 
-		begin->next = from;
-		from->prev = begin;
-		a->next = begin;
-		b->prev = begin->prev;
-		begin->prev->next = b;
-		begin->prev = a;
+		end->prev = from;
+		from->next = end;
+		a->prev = end;
+		b->next = end->next;
+		end->next->prev = b;
+		end->next = a;
 	  }
 
 	  void remove() {
-	    move_after(end->prev, end);
+	    move_after(begin->next, end);
 		size--;
 		removed++;
 	  }
@@ -232,12 +232,16 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  done = true;
 		  depth++;
 
-		  open_it = openlists.end->prev;
+		  open_it = openlists.begin->next;
 		  open = open_it->list;
-			
-		  bool looped = false;
-			
-		  while(!looped) {
+
+		  // create new open lists for this iteration
+		  for(int i = 0; i < depth_todo; i++) {
+			  openlists.add();
+		  }
+
+		  // loop through all open lists except the last
+		  while(open_it->next != openlists.end) {
 			Node *arr[exp_todo];
 			bool some_exp = false;
 			for(int i = 0; i < exp_todo; i++) {
@@ -254,29 +258,21 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 				some_exp = true;
 			}
 
-			if(open_it->prev != openlists.begin) {
-			  open_it = open_it->prev;
-			  open = open_it->list;
-			} else {
-			  openlists.add();
-			  open_it = openlists.begin->next;
-			  open = open_it->list;
-			  if(--depth_todo > 0) {
-				depth_todo--;
-			  } else {
-				looped = true;
-			  }
-			}
+			// move to next open list
+		    open_it = open_it->next;
+			open = open_it->list;
 
+			// record the last filled open list for pruning
 			if(some_exp)
 			  last_filled = open_it;
 
+			// prune if this is the shallowest depth open list and it is empty
 			if(!some_exp && done) {
 				openlists.remove();
 				continue;
 			}
 
-			
+			// expand one or more nodes, based on slope
 			for(int i = 0; i < exp_todo; i++) {
 			  Node *n = arr[i];
 			  if(!n)
@@ -284,16 +280,14 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 			  State buf, &state = d.unpack(buf, n->state);
 			  expand(d, n, state);
 			}
-		    
 			
 			done = false;
 		  }
 
-		  if(last_filled != openlists.begin->next) {
+		  // prune sequences of empty open lists from end
+		  if(last_filled != openlists.end->prev) {
 			openlists.remove_rest(last_filled);
 		  }
-		  
-		  depth_todo = slope;
 		}
 
 		if(cand) {
