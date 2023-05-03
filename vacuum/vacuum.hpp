@@ -151,8 +151,10 @@ public:
 				return;
 
 			int dirt = d.dirt[s.loc];
-			if (dirt >= 0 && s.dirt->at(dirt))
+			if (dirt >= 0 && s.dirt->at(dirt)) {
 				ops[n++] = Suck;
+				return;
+			}
 
 			for (unsigned int i = 0; i < d.map->nmvs; i++) {
 				if (d.map->ok(s.loc, d.map->mvs[i]))
