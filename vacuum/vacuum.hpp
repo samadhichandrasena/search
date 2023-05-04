@@ -3,6 +3,7 @@
 
 #include "../utils/utils.hpp"
 #include "../gridnav/gridmap.hpp"
+#include "../structs/binheap.hpp"
 #include <memory>
 #include <cstring>
 #include <cstdio>
@@ -41,57 +42,99 @@ public:
 
 		int loc, energy, ndirt, weight;
 		std::shared_ptr<std::vector<bool> > dirt;
+		Cost dirt_dist;
 	};
 
 	typedef State PackedState;
 
 	State initialstate(void) const;
 
-	Cost h(const State &s) const {
+	Cost md(const std::pair<int, int> a, const std::pair<int, int> b) const {
+		int ax = a.first;
+		int ay = a.second;
+
+		int bx = b.first;
+		int by = b.second;
+
+		return abs(ax - bx) + abs(ay - by);
+	}
+
+	struct MSTNode {
+		int openind;
+		int dist;
+		std::pair<int, int> dirtloc;
+		int ind;
+
+		MSTNode(int dst, std::pair<int, int> dl, int i) :
+		  openind(-1), dist(dst), dirtloc(dl), ind(i) {
+		}
+
+		static void setind(MSTNode *n, int i) {
+			n->openind = i;
+		}
+	  
+		static bool pred(MSTNode *a, MSTNode *b) {
+			return a->dist < b->dist;
+		}
+	  
+	};
+
+	Cost getMST(const State &s) const {
+		int sum = 0;
 
 		if (s.ndirt == 0) {
 			return 0;
 		}
-	    
-		std::pair<int, int> pt = map->coord(s.loc);
-		int agentx = pt.first;
-		int agenty = pt.second;
+		
+		BinHeap<MSTNode, MSTNode *> heap;
+
+		int dists[s.dirt->size()];
 		
 		unsigned int i;
-		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
-			;
-
-		int minx = dirtLocs[i].first;
-		int maxx = minx;
-		int miny = dirtLocs[i].second;
-		int maxy = miny;
-		int neardirtx = abs(dirtLocs[i].first - agentx);
-		int neardirty = abs(dirtLocs[i].second - agenty);
-
-		for (i++; i < s.dirt->size(); i++) {
-			if (!s.dirt->at(i))
-				continue;
-			int x = dirtLocs[i].first, y = dirtLocs[i].second;
-			if (x < minx)
-				minx = x;
-			if (x > maxx)
-				maxx = x;
-			if (y < miny)
-				miny = y;
-			if (y > maxy)
-				maxy = y;
-			neardirtx = std::min(neardirtx, abs(dirtLocs[i].first - agentx));
-			neardirty = std::min(neardirty, abs(dirtLocs[i].second - agenty));
+		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++) {
+			dists[i] = 0;
 		}
 
-		int agent_dist = neardirtx + neardirty;
+		std::pair<int, int> root = dirtLocs[i];
+		dists[i] = 0;
 
-		/*int edge_dist = std::min(abs(agentx - minx), abs(agentx - maxx)) +
-		  std::min(abs(agenty - miny), abs(agenty - maxy));*/
+		for (i++; i < s.dirt->size(); i++) {
+			if (!s.dirt->at(i)) {
+				dists[i] = 0;
+				continue;
+			}
+
+			MSTNode *n = new MSTNode(md(root, dirtLocs[i]), dirtLocs[i], i);
+			heap.push(n);
+			dists[i] = n->dist;
+		}
+
+		while(!heap.empty()) {
+			MSTNode *n = *heap.pop();
+
+			for (i = 0; i < heap.size(); i++) {
+		    	MSTNode *other = heap.at(i);
+
+				int dist = md(n->dirtloc, other->dirtloc);
+				if(dist < other->dist) {
+					other->dist = dist;
+					heap.update(i);
+					dists[other->ind] = dist;
+				}
+			}
+			
+			delete n;
+		}
 		
-		assert(s.weight > 0);
-		int dist = ((maxx-minx) + (maxy-miny)) + agent_dist;
-		return s.ndirt + dist * s.weight;
+		for (i = 0; i < s.dirt->size(); i++) {
+			sum += dists[i];
+		}
+		
+		return sum;
+	}
+
+	Cost h(const State &s) const {
+		return s.ndirt + (d(s) - s.ndirt) * s.weight;
 	}
 
 	Cost d(const State &s) const {
@@ -99,46 +142,23 @@ public:
 		if (s.ndirt == 0) {
 			return 0;
 		}
-	    
-		std::pair<int, int> pt = map->coord(s.loc);
-		int agentx = pt.first;
-		int agenty = pt.second;
 		
 		unsigned int i;
 		for (i = 0; i < s.dirt->size() && !s.dirt->at(i); i++)
 			;
 
-		int minx = dirtLocs[i].first;
-		int maxx = minx;
-		int miny = dirtLocs[i].second;
-		int maxy = miny;
-		int neardirtx = abs(dirtLocs[i].first - agentx);
-		int neardirty = abs(dirtLocs[i].second - agenty);
+		std::pair<int, int> agentLoc = map->coord(s.loc);
+		int agentDist = md(agentLoc, dirtLocs[i]);
 
 		for (i++; i < s.dirt->size(); i++) {
 			if (!s.dirt->at(i))
 				continue;
-			int x = dirtLocs[i].first, y = dirtLocs[i].second;
-			if (x < minx)
-				minx = x;
-			if (x > maxx)
-				maxx = x;
-			if (y < miny)
-				miny = y;
-			if (y > maxy)
-				maxy = y;
-			neardirtx = std::min(neardirtx, abs(dirtLocs[i].first - agentx));
-			neardirty = std::min(neardirty, abs(dirtLocs[i].second - agenty));
+			int d = md(agentLoc, dirtLocs[i]);
+			agentDist = std::min(agentDist, d);
 		}
-
-		int agent_dist = neardirtx + neardirty;
-
-		/*int edge_dist = std::min(abs(agentx - minx), abs(agentx - maxx)) +
-		  std::min(abs(agenty - miny), abs(agenty - maxy));*/
 		
 		assert(s.weight > 0);
-		int dist = ((maxx-minx) + (maxy-miny)) + agent_dist;
-		return s.ndirt + dist * 1.0;
+		return s.ndirt + (agentDist + s.dirt_dist) * 1.0;
 	}
 
 	bool isgoal(const State &s) const {
@@ -200,6 +220,8 @@ public:
 
 				revop = Nop;
 				revcost = Cost(-1);
+
+				state.dirt_dist = d.getMST(state);
 
 			} else if (op == Charge) {
 				fatal("Charge operator!");
