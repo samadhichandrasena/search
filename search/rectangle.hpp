@@ -219,7 +219,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		expand(d, n0, s0);
 		int width_inc = int(ceil(1/aspect));
 		int depth_todo = int(aspect);
-		int n_iter = 1;
+		int n_iter = 0;
 	    int exp_todo = width_inc;
 
 		sol_count = 0;
@@ -233,24 +233,31 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		while (!done && !SearchAlgorithm<D>::limit()) {
 		  done = true;
 		  depth++;
+		  n_iter++;
 
 		  open_it = openlists.begin->next;
 		  open = open_it->list;
 
-		  // create new open lists for this iteration
-		  for(int i = 0; i < depth_todo; i++) {
-			  openlists.add();
-		  }
+		  openlists.add();
+		  depth_todo = int(aspect);
 
-		  // loop through all open lists except the last
+		  // loop through all open lists, adding more at the end if needed
 		  while(open_it->next != openlists.end) {
 			if(open_it->next->next != openlists.end) {
 			  exp_todo = width_inc;
 			} else {
 			  exp_todo = n_iter * width_inc;
+			  
+			  // create new open lists for this iteration
+			  if(depth_todo > 0) {
+				openlists.add();
+				depth_todo--;
+			  } else {
+				break;
+			  }
 			}
 			exp_todo = std::min((int)open->size(), exp_todo);
-			n_iter++;
+			
 			Node *arr[exp_todo];
 			bool some_exp = false;
 			for(int i = 0; i < exp_todo; i++) {
