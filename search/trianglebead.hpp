@@ -156,12 +156,15 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 	TriangleBeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
-		slope = 1;
+		delta_height = 1; //setting start height to 1
+		delta_base = 1; //setting start base to 1
 		for (int i = 0; i < argc; i++) {
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
-			if (i < argc - 1 && strcmp(argv[i], "-slope") == 0)
-				slope = strtod(argv[++i], NULL);
+			if (i < argc - 1 && strcmp(argv[i], "-dH") == 0) //takes in height argument (stays as 1 if user doesn't enter anything)
+				delta_height = strtod(argv[++i], NULL);
+			if (i < argc - 1 && strcmp(argv[i], "-dB") == 0) //takes in base argument
+				delta_base = strtod(argv[++i], NULL);
 		}
     
 		nodes = new Pool<Node>();
@@ -217,8 +220,8 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		open_count = 0;
 
 		expand(d, n0, s0);
-		int depth_todo = int(slope);
-		int exp_todo = int(ceil(1/slope));
+		int depth_todo = int(delta_height);
+		int exp_todo = int(delta_base);
 
 		sol_count = 0;
 		depth = 1;
@@ -240,11 +243,11 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 			  openlists.add();
 		  }
 
-		  // loop through all open lists except the last
+		  // loops through all open lists except the last
 		  while(open_it->next != openlists.end) {
-			Node *arr[exp_todo];
+			Node *arr[exp_todo]; //creating array of nodes off open-list
 			bool some_exp = false;
-			for(int i = 0; i < exp_todo; i++) {
+			for(int i = 0; i < exp_todo; i++) { //for loop attempts to pull delta_base no. nodes off the open list
 			  Node *n = NULL;
 				  
 			  while(!n && !open->empty()) {
@@ -273,7 +276,7 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 			}
 
 			// expand one or more nodes, based on slope
-			for(int i = 0; i < exp_todo; i++) {
+			for(int i = 0; i < exp_todo; i++) { //expands UP to delta_base nodes 
 			  Node *n = arr[i];
 			  if(!n)
 				continue;
@@ -380,6 +383,7 @@ private:
 	int depth;
 	int open_count;
 	int sol_count;
-	double slope;
+	int delta_height;
+	int delta_base;
   
 };
