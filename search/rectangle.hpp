@@ -156,6 +156,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 	RectangleBeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
+		dump = false;
 		delta_height = 1;
 		delta_base = 1;
 		for (int i = 0; i < argc; i++) {
@@ -165,6 +166,8 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 				delta_height = strtod(argv[++i], NULL);
 			if (i < argc - 1 && strcmp(argv[i], "-dB") == 0)
 				delta_base = strtod(argv[++i], NULL);
+			if (strcmp(argv[i], "-dump") == 0)
+				dump = true;
 		}
     
 		nodes = new Pool<Node>();
@@ -219,6 +222,11 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 
 		open_count = 0;
 
+		if(dump) {
+		  fprintf(stderr, "depth 0\n");
+		  State buf, &state = d.unpack(buf, n0->state);
+		  d.dumpstate(stderr, state);
+		}
 		expand(d, n0, s0);
 		int width_inc = int(delta_base);
 		int depth_todo = int(delta_height);
@@ -243,9 +251,13 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 
 		  openlists.add();
 		  depth_todo = int(delta_height);
+		  
+		  int curr_depth = openlists.removed;
 
 		  // loop through all open lists, adding more at the end if needed
 		  while(open_it->next != openlists.end) {
+			curr_depth++;
+			
 			if(open_it->next->next != openlists.end) {
 			  exp_todo = width_inc;
 			} else {
@@ -291,12 +303,19 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 				continue;
 			}
 
+			if(dump) {
+			  fprintf(stderr, "depth %d\n", curr_depth);
+			}
 			// expand one or more nodes, based on slope
 			for(int i = 0; i < exp_todo; i++) {
 			  Node *n = arr[i];
 			  if(!n)
 				continue;
+			  
 			  State buf, &state = d.unpack(buf, n->state);
+			  if(dump) {
+				d.dumpstate(stderr, state);
+			  }
 			  expand(d, n, state);
 			}
 			
@@ -390,6 +409,7 @@ private:
 	}
 
     bool dropdups;
+    bool dump;
     Ring openlists;
  	OpenList<Node, Node, double> *open;
  	ClosedList<Node, Node, D> closed;

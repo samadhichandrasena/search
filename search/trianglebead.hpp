@@ -156,15 +156,21 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 	TriangleBeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
+		dump = false;
 		delta_height = 1; //setting start height to 1
 		delta_base = 1; //setting start base to 1
 		for (int i = 0; i < argc; i++) {
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
-			if (i < argc - 1 && strcmp(argv[i], "-dH") == 0) //takes in height argument (stays as 1 if user doesn't enter anything)
+			// takes in height argument
+			// (stays as 1 if user doesn't enter anything)
+			if (i < argc - 1 && strcmp(argv[i], "-dH") == 0) 
 				delta_height = strtod(argv[++i], NULL);
-			if (i < argc - 1 && strcmp(argv[i], "-dB") == 0) //takes in base argument
+			//takes in base argument
+			if (i < argc - 1 && strcmp(argv[i], "-dB") == 0)
 				delta_base = strtod(argv[++i], NULL);
+			if (strcmp(argv[i], "-dump") == 0)
+				dump = true;
 		}
     
 		nodes = new Pool<Node>();
@@ -219,6 +225,12 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 
 		open_count = 0;
 
+		
+		if(dump) {
+		  fprintf(stderr, "depth 0\n");
+		  State buf, &state = d.unpack(buf, n0->state);
+		  d.dumpstate(stderr, state);
+		}
 		expand(d, n0, s0);
 		int depth_todo = int(delta_height);
 		int exp_todo = int(delta_base);
@@ -242,12 +254,17 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  for(int i = 0; i < depth_todo; i++) {
 			  openlists.add();
 		  }
+		  
+		  int curr_depth = openlists.removed;
 
 		  // loops through all open lists except the last
 		  while(open_it->next != openlists.end) {
+			curr_depth++;
+			
 			Node *arr[exp_todo]; //creating array of nodes off open-list
 			bool some_exp = false;
-			for(int i = 0; i < exp_todo; i++) { //for loop attempts to pull delta_base no. nodes off the open list
+			//for loop attempts to pull delta_base no. nodes off the open list
+			for(int i = 0; i < exp_todo; i++) { 
 			  Node *n = NULL;
 				  
 			  while(!n && !open->empty()) {
@@ -275,12 +292,20 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 				continue;
 			}
 
+			
+			if(dump) {
+			  fprintf(stderr, "depth %d\n", curr_depth);
+			}
 			// expand one or more nodes, based on slope
 			for(int i = 0; i < exp_todo; i++) { //expands UP to delta_base nodes 
 			  Node *n = arr[i];
 			  if(!n)
 				continue;
+			  
 			  State buf, &state = d.unpack(buf, n->state);
+			  if(dump) {
+				d.dumpstate(stderr, state);
+			  }
 			  expand(d, n, state);
 			}
 			
@@ -374,6 +399,7 @@ private:
 	}
 
     bool dropdups;
+    bool dump;
     Ring openlists;
  	OpenList<Node, Node, double> *open;
  	ClosedList<Node, Node, D> closed;
