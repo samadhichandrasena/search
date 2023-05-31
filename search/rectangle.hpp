@@ -156,12 +156,15 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 	RectangleBeadSearch(int argc, const char *argv[]) :
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
-		aspect = 1;
+		delta_height = 1;
+		delta_base = 1;
 		for (int i = 0; i < argc; i++) {
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
-			if (i < argc - 1 && strcmp(argv[i], "-aspect") == 0)
-				aspect = strtod(argv[++i], NULL);
+			if (i < argc - 1 && strcmp(argv[i], "-dH") == 0)
+				delta_height = strtod(argv[++i], NULL);
+			if (i < argc - 1 && strcmp(argv[i], "-dB") == 0)
+				delta_base = strtod(argv[++i], NULL);
 		}
     
 		nodes = new Pool<Node>();
@@ -217,8 +220,8 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		open_count = 0;
 
 		expand(d, n0, s0);
-		int width_inc = int(ceil(1/aspect));
-		int depth_todo = int(aspect);
+		int width_inc = int(delta_base);
+		int depth_todo = int(delta_height);
 		int n_iter = 0;
 	    int exp_todo = width_inc;
 
@@ -239,7 +242,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		  open = open_it->list;
 
 		  openlists.add();
-		  depth_todo = int(aspect);
+		  depth_todo = int(delta_height);
 
 		  // loop through all open lists, adding more at the end if needed
 		  while(open_it->next != openlists.end) {
@@ -396,6 +399,7 @@ private:
 	int depth;
 	int open_count;
 	int sol_count;
-	double aspect;
+	int delta_height;
+	int delta_base;
   
 };
