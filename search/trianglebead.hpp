@@ -224,12 +224,13 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		auto last_filled = open_it;
 
 		open_count = 0;
-
 		
 		if(dump) {
-		  fprintf(stderr, "depth 0\n");
+		  fprintf(stderr, "depth,expnum,state,g\n");
+		  fprintf(stderr, "0,%lu,", SearchAlgorithm<D>::res.expd);
 		  State buf, &state = d.unpack(buf, n0->state);
 		  d.dumpstate(stderr, state);
+		  fprintf(stderr, ",%f\n", (float)n0->g);
 		}
 		expand(d, n0, s0);
 		int depth_todo = int(delta_height);
@@ -292,10 +293,6 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 				continue;
 			}
 
-			
-			if(dump) {
-			  fprintf(stderr, "depth %d\n", curr_depth);
-			}
 			// expand one or more nodes, based on slope
 			for(int i = 0; i < exp_todo; i++) { //expands UP to delta_base nodes 
 			  Node *n = arr[i];
@@ -304,7 +301,10 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 			  
 			  State buf, &state = d.unpack(buf, n->state);
 			  if(dump) {
+				fprintf(stderr, "%d,%lu,", curr_depth,
+						SearchAlgorithm<D>::res.expd);
 				d.dumpstate(stderr, state);
+				fprintf(stderr, ",%f\n", (float)n->g);
 			  }
 			  expand(d, n, state);
 			}
@@ -371,6 +371,13 @@ private:
 		
 		State buf, &kstate = d.unpack(buf, kid->state);
 		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
+		  
+		  if(dump) {
+			fprintf(stderr, "0,%lu,", SearchAlgorithm<D>::res.expd);
+			d.dumpstate(stderr, kstate);
+			fprintf(stderr, ",%f\n", (float)kid->g);
+		  }
+		  
 		  cand = kid;
 		  sol_count++;
 		  dfrow(stdout, "incumbent", "uuugg", sol_count, this->res.expd,
