@@ -162,7 +162,8 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		for (int i = 0; i < argc; i++) {
 			if (strcmp(argv[i], "-dropdups") == 0)
 				dropdups = true;
-			if (i < argc - 1 && strcmp(argv[i], "-dH") == 0)
+			if (i < argc - 1 && (strcmp(argv[i], "-dH") == 0 ||
+								 strcmp(argv[i], "-aspect") == 0))
 				delta_height = strtod(argv[++i], NULL);
 			if (i < argc - 1 && strcmp(argv[i], "-dB") == 0)
 				delta_base = strtod(argv[++i], NULL);
@@ -229,7 +230,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		}
 
 		open_count = 0;
-		expand(d, n0, s0);
+		expand(d, n0, s0, 0);
 		
 		int width_inc = int(delta_base);
 		int depth_todo = int(delta_height);
@@ -319,7 +320,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 				d.dumpstate(stderr, state);
 				fprintf(stderr, ",%f\n", (float)n->g);
 			  }
-			  expand(d, n, state);
+			  expand(d, n, state, curr_depth);
 			}
 			
 			done = false;
@@ -357,7 +358,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 
 private:
 
-	void expand(D &d, Node *n, State &state) {
+  void expand(D &d, Node *n, State &state, int curr_depth) {
 		SearchAlgorithm<D>::res.expd++;
 
 		typename D::Operators ops(d, state);
@@ -365,11 +366,11 @@ private:
 			if (ops[i] == n->pop)
 				continue;
 			SearchAlgorithm<D>::res.gend++;
-			considerkid(d, n, state, ops[i]);
+			considerkid(d, n, state, ops[i], curr_depth);
 		}
 	}
 
-	void considerkid(D &d, Node *parent, State &state, Oper op) {
+  void considerkid(D &d, Node *parent, State &state, Oper op, int curr_depth) {
 		Node *kid = nodes->construct();
 		assert (kid);
 		typename D::Edge e(d, state, op);
@@ -386,7 +387,8 @@ private:
 		if (d.isgoal(kstate) && (!cand || kid->g < cand->g)) {
 		  
 		  if(dump) {
-			fprintf(stderr, "0,%lu,", SearchAlgorithm<D>::res.expd);
+			fprintf(stderr, "%d,%lu,", curr_depth,
+					SearchAlgorithm<D>::res.expd);
 			d.dumpstate(stderr, kstate);
 			fprintf(stderr, ",%f\n", (float)kid->g);
 		  }
