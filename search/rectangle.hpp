@@ -157,6 +157,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		SearchAlgorithm<D>(argc, argv), closed(30000001) {
 		dropdups = false;
 		dump = false;
+		exponential_h = false;
 		delta_height = 1;
 		delta_base = 1;
 		for (int i = 0; i < argc; i++) {
@@ -169,6 +170,8 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 				delta_base = strtod(argv[++i], NULL);
 			if (strcmp(argv[i], "-dump") == 0)
 				dump = true;
+			if (strcmp(argv[i], "-expo") == 0)
+				exponential_h = true;
 		}
     
 		nodes = new Pool<Node>();
@@ -255,6 +258,10 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 
 		  openlists.add();
 		  depth_todo = int(delta_height);
+		  
+		  if (exponential_h){
+			delta_height = delta_height*2;
+		  }
 		  
 		  int curr_depth = openlists.removed;
 
@@ -422,6 +429,7 @@ private:
 
     bool dropdups;
     bool dump;
+	bool exponential_h;
     Ring openlists;
  	OpenList<Node, Node, double> *open;
  	ClosedList<Node, Node, D> closed;
