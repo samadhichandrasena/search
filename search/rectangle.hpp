@@ -238,7 +238,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		int width_inc = int(delta_base);
 		int depth_todo = int(delta_height);
 		int n_iter = 0;
-	    int exp_todo = width_inc;
+		int exp_todo = width_inc;
 
 		sol_count = 0;
 		depth = 1;
@@ -264,7 +264,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 		  }
 		  
 		  int curr_depth = openlists.removed;
-
+		  
 		  // loop through all open lists, adding more at the end if needed
 		  while(open_it->next != openlists.end) {
 			curr_depth++;
@@ -275,7 +275,7 @@ template <class D> struct RectangleBeadSearch : public SearchAlgorithm<D> {
 			  exp_todo = n_iter * width_inc;
 			  
 			  // create new open lists for this iteration
-			  if(depth_todo > 0) {
+			  if(depth_todo > 0 && !open->empty()) {
 				openlists.add();
 				depth_todo--;
 			  } else {

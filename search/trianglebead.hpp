@@ -256,25 +256,29 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  open = open_it->list;
 
 		  depth_todo = int(delta_height);
-
-		//   fprintf(stderr, "dH for this iteration: %d\n", delta_height);
-
+		  
 		  if(expo){
 			delta_height *= 2;
-			}
-
-		  // create new open lists for this iteration
-		  for(int i = 0; i < depth_todo; i++) {
-			  openlists.add();
-			  
-
 		  }
+
+		  // create new open list for this iteration
+		  openlists.add();
 		  
 		  int curr_depth = openlists.removed;
 
 		  // loops through all open lists except the last
 		  while(open_it->next != openlists.end) {
 			curr_depth++;
+
+			if(open_it->next->next == openlists.end) {
+			  // create new open lists for this iteration
+			  if(depth_todo > 0 && !open->empty()) {
+				openlists.add();
+				depth_todo--;
+			  } else {
+				break;
+			  }
+			}
 			
 			Node *arr[exp_todo]; //creating array of nodes off open-list
 			bool some_exp = false;
