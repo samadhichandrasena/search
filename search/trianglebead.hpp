@@ -158,6 +158,7 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		dropdups = false;
 		dump = false;
 		expo = false;
+		logH = false;
 		delta_height = 1; //setting start height to 1
 		delta_base = 1; //setting start base to 1
 		for (int i = 0; i < argc; i++) {
@@ -175,6 +176,11 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 				dump = true;
 			if (strcmp(argv[i], "-expo") == 0)
 				expo = true;
+			if (strcmp(argv[i], "-logH") == 0){
+				logH = true;
+				delta_height = 1024;
+			}
+
 		}
     
 		nodes = new Pool<Node>();
@@ -258,7 +264,13 @@ template <class D> struct TriangleBeadSearch : public SearchAlgorithm<D> {
 		  depth_todo = int(delta_height);
 		  
 		  if(expo){
-			delta_height *= 2;
+			delta_height *= 2; //delta_height = delta_height*2
+		  }
+
+		  if(logH){
+			if(delta_height > 1){
+				delta_height /= 2;
+			}
 		  }
 
 		  // create new open list for this iteration
@@ -427,6 +439,7 @@ private:
     bool dropdups;
     bool dump;
 	bool expo;
+	bool logH;
     Ring openlists;
  	OpenList<Node, Node, double> *open;
  	ClosedList<Node, Node, D> closed;
